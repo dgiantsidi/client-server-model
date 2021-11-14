@@ -1,0 +1,23 @@
+syntax = "proto2";
+
+package sockets;
+
+message client_msg {
+    enum OperationType {
+        ADD         = 0;
+        SUB         = 1;
+        TERMINATION = 2;
+        RANDOM_DATA = 3;
+
+    }
+
+    message OperationData {
+        required OperationType type = 1;
+        optional int32 argument = 2;
+        optional string random_data = 3;
+
+    }
+
+    repeated OperationData ops = 3;
+
+}
