@@ -25,6 +25,8 @@ static void processing_func(std::shared_ptr<class server_thread> args)
 
         if (ret > 0) {
             // new req 
+            // pass func1 as callback that will do the 
+            // actual req processing
             args->get_new_requests(func1);
             continue;
         }
@@ -40,10 +42,10 @@ int main(int args, char* argv[]) {
     nb_server_threads = std::atoi(argv[1]);
     port = std::atoi(argv[2]);
 
-std::vector<std::shared_ptr<class server_thread>> server_threads;
-server_threads.reserve(nb_server_threads);
-std::vector<std::thread> threads;
-threads.reserve(nb_server_threads);
+    std::vector<std::shared_ptr<class server_thread>> server_threads;
+    server_threads.reserve(nb_server_threads);
+    std::vector<std::thread> threads;
+    threads.reserve(nb_server_threads);
 
     for (size_t i = 0; i < nb_server_threads; i++) {
         auto ptr = std::make_shared<class server_thread>(i);
@@ -109,16 +111,8 @@ threads.reserve(nb_server_threads);
             std::cout << "socket : " << new_fd << " matched to thread: " << server_thread_id << "\n";
             fcntl(new_fd, F_SETFL, O_NONBLOCK);
             server_threads[server_thread_id]->update_connections(new_fd);
-            /*
-               std::unique_lock<std::mutex> lk(threads_args[nb_clients % nb_server_threads].get()->mtx);
-               threads_args[nb_clients % nb_server_threads].get()->listening_socket.push_back(new_fd);
-               threads_args[nb_clients % nb_server_threads].get()->total_bytes.insert({new_fd, 0});
-               threads_args[nb_clients % nb_server_threads].get()->cv.notify_one();
-               */
             nb_clients++;
-
         }
-
     }
 
     return 0;
