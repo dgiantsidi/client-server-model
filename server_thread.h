@@ -64,8 +64,8 @@ class server_thread {
         {
             std::vector<int> lsockets;
             {
-            std::unique_lock<std::mutex> lock(mtx);
-            lsockets = listening_sockets;
+                std::unique_lock<std::mutex> lock(mtx);
+                lsockets = listening_sockets;
             }
             uint64_t bytecount = 0;
             std::unique_ptr<char[]> buffer;
@@ -78,7 +78,7 @@ class server_thread {
                         }
                     }
                     process_req(bytecount, buffer.get());
-                    
+
                 }
             }
         }
