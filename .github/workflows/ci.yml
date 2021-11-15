@@ -111,12 +111,14 @@ jobs:
       if: matrix.os == 'ubuntu'
       run: sudo apt-get install clang-tidy cppcheck -y -q
 
-    - name: Build protobuf
+    - name: Cache protobuf
       id: build-protobuf
       uses: actions/cache@v1
       with:
         path: protobuf
         key: ${{ runner.os }}-protobuf
+
+    - name: Build protobuf
       if: matrix.os == 'ubuntu' && steps.cache-protobuf.outputs.cache-hit != 'true'
       run: |
         git clone https://github.com/protocolbuffers/protobuf.git
