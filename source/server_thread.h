@@ -3,8 +3,11 @@
 #include <mutex>
 #include <algorithm>
 #include <condition_variable>
+#include <optional>
 
 #include "callback.h"
+#include "shared.h"
+
 
 class server_thread {
     public:
@@ -114,18 +117,7 @@ class server_thread {
                 max_fd = (max_fd < rfd) ? rfd : max_fd;
             }
         }
-
-        /**
-         *  * It takes as an argument a ptr to an array of size 4 or bigger and 
-         *   * converts the char array into an integer.
-         *    */
-        int convertByteArrayToInt(char* b) {
-            return (b[0] << 24)
-                + ((b[1] & 0xFF) << 16)
-                + ((b[2] & 0xFF) << 8)
-                + (b[3] & 0xFF);
-
-        }
+   
 
         /**
          *  * It returns the actual size of msg.
@@ -133,9 +125,9 @@ class server_thread {
          *    * The function expects at least that the msg contains the first 4 bytes that
          *     * indicate the actual size of the payload.
          *      */
-        int destruct_message(char* msg, size_t bytes) {
+        auto destruct_message(char * msg, size_t bytes) -> std::optional<uint32_t> {
             if (bytes < 4)
-                return -1;
+                return std::nullopt;
 
             auto actual_msg_size = convertByteArrayToInt(msg);
 
@@ -155,6 +147,7 @@ class server_thread {
                 bytes = recv(fd, tmp, remaining_bytes, 0);
                 if (bytes < 0) {
                     // @dimitra: Note that the socket is non-blocking so it is fine to return -1 (EWOULDBLOCK/EAGAIN).
+                    return -1;
                 }
                 else if (bytes == 0) {
                     // @dimitra: Connection reset by peer
@@ -166,7 +159,11 @@ class server_thread {
                 }
             }
 
-            int64_t actual_msg_size = destruct_message(dlen, 4);
+            auto actual_msg_size_opt = destruct_message(dlen, 4);
+            if (!actual_msg_size_opt) {
+                return -1;
+            }
+            auto actual_msg_size = *actual_msg_size_opt;
             remaining_bytes = actual_msg_size;
             buf = std::make_unique<char[]>(actual_msg_size+1);
             buf[actual_msg_size] = '\0';
@@ -176,6 +173,7 @@ class server_thread {
                 bytes = recv(fd, tmp, remaining_bytes, 0);
                 if (bytes < 0) {
                     // @dimitra: Note that the socket is non-blocking so it is fine to return -1 (EWOULDBLOCK/EAGAIN).
+                    return -1;
                 }
                 else if (bytes == 0) {
                     return 0;

@@ -16,7 +16,7 @@ int port                = 1025;
 constexpr int backlog   = 1024; // how many pending connections the queue will hold
 
 
-static void processing_func(std::shared_ptr<class server_thread> args)
+static void processing_func(std::shared_ptr<server_thread> args)
 {
     args->init();
     while (1)

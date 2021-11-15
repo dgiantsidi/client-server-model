@@ -1,3 +1,7 @@
+#pragma once
+
+#include "shared.h"
+
 class client_thread {
     public:
         void connect_to_the_server(int port, char* hostname) 
@@ -70,7 +74,7 @@ class client_thread {
          *         *
          *          */
         void construct_message(char* dst, char* payload, size_t payload_size) {
-            _convertIntToByteArray(dst, payload_size);
+            convertIntToByteArray(dst, payload_size);
             ::memcpy(dst+4, payload, payload_size);
         }
 
@@ -98,29 +102,5 @@ class client_thread {
             }
 
             return len;
-        }
-        /**
-         *  * It takes as arguments one char[] array of 4 or bigger size and an integer.
-         *   * It converts the integer into a byte array.
-         *    */
-        void _convertIntToByteArray(char* dst, int sz) {
-            auto tmp = dst;
-            tmp[0] = (sz >> 24) & 0xFF;
-            tmp[1] = (sz >> 16) & 0xFF;
-            tmp[2] = (sz >> 8) & 0xFF;
-            tmp[3] = sz & 0xFF;
-
-        }
-
-        /**
-         *  * It takes as an argument a ptr to an array of size 4 or bigger and 
-         *   * converts the char array into an integer.
-         *    */
-        int _convertByteArrayToInt(char* b) {
-            return (b[0] << 24)
-                + ((b[1] & 0xFF) << 16)
-                + ((b[2] & 0xFF) << 8)
-                + (b[3] & 0xFF);
-
         }
 };

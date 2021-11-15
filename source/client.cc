@@ -15,22 +15,12 @@
 #include <fcntl.h>
 
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <errno.h>
-#include <string.h>
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <time.h>
-#include <unistd.h>
 #include <fcntl.h>
 #include <sys/wait.h>
 #include <signal.h>
-#include <cstring>
-#include <iostream>
 #include <thread>
 #include <vector>
 #include <mutex>
@@ -46,6 +36,8 @@
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <google/protobuf/text_format.h>
 
+#include "shared.h"
+
 int nb_clients  = -1;
 int port        = -1;
 int nb_messages = -1;
@@ -55,30 +47,7 @@ uint64_t last_result = 0;
 std::string _string = "llllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll";
 std::atomic<uint32_t> global_number{0};
 
-/**
- *  * It takes as arguments one char[] array of 4 or bigger size and an integer.
- *   * It converts the integer into a byte array.
- *    */
-void _convertIntToByteArray(char* dst, int sz) {
-    auto tmp = dst;
-    tmp[0] = (sz >> 24) & 0xFF;
-    tmp[1] = (sz >> 16) & 0xFF;
-    tmp[2] = (sz >> 8) & 0xFF;
-    tmp[3] = sz & 0xFF;
 
-}
-
-/**
- *  * It takes as an argument a ptr to an array of size 4 or bigger and 
- *   * converts the char array into an integer.
- *    */
-int _convertByteArrayToInt(char* b) {
-    return (b[0] << 24)
-        + ((b[1] & 0xFF) << 16)
-        + ((b[2] & 0xFF) << 8)
-        + (b[3] & 0xFF);
-
-}
 
 std::unique_ptr<char[]> get_operation(size_t& size) {
     static int i = 0;
@@ -104,7 +73,7 @@ std::unique_ptr<char[]> get_operation(size_t& size) {
         _msg.SerializeToString(&msg_str);
         char number[4];
         size_t sz = msg_str.size();
-        _convertIntToByteArray(number, sz);
+        convertIntToByteArray(number, sz);
         std::unique_ptr<char[]> buf = std::make_unique<char[]>(sz+4);
         ::memcpy(buf.get(), number, 4);
 
@@ -131,7 +100,7 @@ std::unique_ptr<char[]> get_operation(size_t& size) {
 
         char number[4];
         size_t sz = msg_str.size();
-        _convertIntToByteArray(number, sz);
+        convertIntToByteArray(number, sz);
         std::unique_ptr<char[]> buf = std::make_unique<char[]>(sz+4);
         ::memcpy(buf.get(), number, 4);
         ::memcpy(buf.get()+4, msg_str.c_str(), sz);
@@ -155,7 +124,7 @@ std::unique_ptr<char[]> get_operation(size_t& size) {
 
         char number[4];
         size_t sz = msg_str.size();
-        _convertIntToByteArray(number, sz);
+        convertIntToByteArray(number, sz);
         std::unique_ptr<char[]> buf = std::make_unique<char[]>(sz+4);
         ::memcpy(buf.get(), number, 4);
         ::memcpy(buf.get()+4, msg_str.c_str(), sz);
