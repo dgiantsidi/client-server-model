@@ -70,7 +70,7 @@ jobs:
         file: build/coverage/coverage.info
 
   sanitize:
-    needs: [lint, test]
+    needs: [lint]
 
     runs-on: ubuntu-latest
 
@@ -83,7 +83,7 @@ jobs:
 #        version: '3.17.3'
 
     - name: Cache protobuf
-      id: build-protobuf
+      id: cache-protobuf
       uses: actions/cache@v1
       with:
         path: protobuf
@@ -154,7 +154,7 @@ jobs:
 #        version: '3.17.3'
 
     - name: Cache protobuf
-      id: build-protobuf
+      id: cache-protobuf
       uses: actions/cache@v1
       with:
         path: protobuf
