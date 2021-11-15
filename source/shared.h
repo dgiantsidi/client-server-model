@@ -32,13 +32,14 @@ inline auto convertByteArrayToInt(char * b) noexcept -> uint32_t {
  *  * It takes as arguments one char[] array of 4 or bigger size and an integer.
  *   * It converts the integer into a byte array.
  *    */
-inline auto convertIntToByteArray(char* dst, int sz) noexcept -> void{
+inline auto convertIntToByteArray(char* dst, uint32_t sz) noexcept -> void {
   if constexpr (LITTLE_ENDIAN) {
     auto tmp = dst;
     tmp[0] = (sz >> 24) & 0xFF;
     tmp[1] = (sz >> 16) & 0xFF;
     tmp[2] = (sz >> 8) & 0xFF;
     tmp[3] = sz & 0xFF;
+  } else { //BIG_ENDIAN
+    memcpy(dst, &sz, sizeof(sz));
   }
-  memcpy(dst, &sz, sizeof(sz));
 }
