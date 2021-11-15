@@ -109,7 +109,6 @@ jobs:
         sudo ldconfig
 
     - name: Install fmt
-      if: matrix.os == 'ubuntu'
       run: sudo apt-get install libfmt-dev -y -q
 
     - name: Configure
