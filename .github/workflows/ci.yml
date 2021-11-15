@@ -29,12 +29,6 @@ jobs:
       if: always()
       run: cmake -P cmake/spell.cmake
 
-  protobuf:
-    runs-on: ubuntu-latest
-
-    steps:
- 
-
 
   coverage:
     needs: [lint]
@@ -88,7 +82,7 @@ jobs:
 #     with:
 #        version: '3.17.3'
 
-   - name: Cache protobuf
+    - name: Cache protobuf
       id: build-protobuf
       uses: actions/cache@v1
       with:
