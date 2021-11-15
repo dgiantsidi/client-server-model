@@ -1,24 +1,24 @@
+#include <cerrno>
 #include <cstring>
 #include <iostream>
+#include <string>
 #include <thread>
 #include <vector>
 
 #include <arpa/inet.h>
-#include <errno.h>
 #include <fcntl.h>
+#include <fmt/format.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 
 #include "server_thread.h"
 
-int nb_server_threads = 1;
-int port = 1025;
 constexpr int backlog =
     1024;  // how many pending connections the queue will hold
 
-static void processing_func(std::shared_ptr<server_thread> args) {
+static void processing_func(std::shared_ptr<ServerThread> const & args) {
   args->init();
-  while (1) {
+  for (;;) {
     int ret = args->incomming_requests();
 
     if (ret > 0) {
@@ -31,82 +31,96 @@ static void processing_func(std::shared_ptr<server_thread> args) {
   }
 }
 
-int main(int args, char * argv[]) {
-  if (args < 5) {
+auto main(int args, char * argv[]) -> int {
+  constexpr auto n_expected_args = 3;
+  if (args < n_expected_args) {
     std::cerr << "usage: ./server <nb_server_threads> <port>\n";
     return 1;
   }
 
-  nb_server_threads = std::atoi(argv[1]);
-  port = std::atoi(argv[2]);
+  auto const nb_server_threads = std::stoull(argv[1]);
+  if (nb_server_threads == 0) {
+    std::cerr << "usage: ./server <nb_server_threads> <port>\n";
+    return 1;
+  }
+  auto port = std::stoull(argv[2]);
 
   // That type looks wrong, a vector of shared_ptrs?????
-  std::vector<std::shared_ptr<server_thread>> server_threads;
+  std::vector<std::shared_ptr<ServerThread>> server_threads;
   server_threads.reserve(nb_server_threads);
   std::vector<std::thread> threads;
   threads.reserve(nb_server_threads);
 
   for (size_t i = 0; i < nb_server_threads; i++) {
-    auto ptr = std::make_shared<server_thread>(i);
+    auto ptr = std::make_shared<ServerThread>(i);
     server_threads.push_back(ptr);
     threads.emplace_back(std::thread(processing_func, server_threads[i]));
   }
 
   /* listen on sock_fd, new connection on new_fd */
-  int sockfd, new_fd;
 
   /* my address information */
-  sockaddr_in my_addr;
 
   /* connector.s address information */
-  sockaddr_in their_addr;
-  socklen_t sin_size;
 
   int ret = 1;
 
-  if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-    perror("socket");
+  int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if (sockfd == -1) {
+    fmt::print("socket\n");
+    // NOLINTNEXTLINE(concurrency-mt-unsafe)
     exit(1);
   }
 
   if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &ret, sizeof(int)) == -1) {
-    perror("setsockopt");
+    fmt::print("setsockopt");
+    // NOLINTNEXTLINE(concurrency-mt-unsafe)
     exit(1);
   }
 
+  sockaddr_in my_addr {};
   my_addr.sin_family = AF_INET;  // host byte order
   my_addr.sin_port = htons(port);  // short, network byte order
   my_addr.sin_addr.s_addr = INADDR_ANY;  // automatically fill with my IP
-  memset(&(my_addr.sin_zero), 0, 8);  // zero the rest of the struct
+  memset(&(my_addr.sin_zero),
+         0,
+         sizeof(my_addr.sin_zero));  // zero the rest of the struct
 
-  if (bind(sockfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr))
+  if (bind(sockfd, reinterpret_cast<sockaddr *>(&my_addr), sizeof(sockaddr))
       == -1) {
-    perror("bind");
+    fmt::print("bind\n");
+    // NOLINTNEXTLINE(concurrency-mt-unsafe)
     exit(1);
   }
 
   if (listen(sockfd, backlog) == -1) {
-    perror("listen");
+    fmt::print("listen\n");
+    // NOLINTNEXTLINE(concurrency-mt-unsafe)
     exit(1);
   }
 
   uint64_t nb_clients = 0;
-  while (1) {
-    sin_size = sizeof(struct sockaddr_in);
-    std::cout << "waiting for new connections ..\n";
-    if ((new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size))
-        == -1) {
-      std::cerr << "accept() failed .. " << std::strerror(errno) << "\n";
+  for (;;) {
+    socklen_t sin_size = sizeof(sockaddr_in);
+    fmt::print("waiting for new connections ..\n");
+    sockaddr_in their_addr {};
+    auto new_fd = accept4(sockfd,
+                          reinterpret_cast<sockaddr *>(&their_addr),
+                          &sin_size,
+                          SOCK_CLOEXEC);
+    if (new_fd == -1) {
+      // NOLINTNEXTLINE(concurrency-mt-unsafe)
+      fmt::print("accecpt() failed ..{}\n", std::strerror(errno));
       continue;
     }
 
-    printf("Received request from Client: %s:%d\n",
-           inet_ntoa(their_addr.sin_addr),
-           port);
+    fmt::print("Received request from Client: {}:{}\n",
+               inet_ntoa(their_addr.sin_addr),  // NOLINT(concurrency-mt-unsafe)
+               port);
     {
       auto server_thread_id = nb_clients % nb_server_threads;
-      std::cout << "socket : " << new_fd
-                << " matched to thread: " << server_thread_id << "\n";
+      fmt::print(
+          "socket : {}  matched to thread: {}\n", new_fd, server_thread_id);
       fcntl(new_fd, F_SETFL, O_NONBLOCK);
       server_threads[server_thread_id]->update_connections(new_fd);
       nb_clients++;

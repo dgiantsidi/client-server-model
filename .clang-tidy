@@ -11,7 +11,17 @@ Checks: "*,\
   -llvmlibc-*,\
   -misc-non-private-member-variables-in-classes,
   -readability-implicit-bool-conversion,
-  -cppcoreguidelines-pro-type-reinterpret-cast"
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -modernize-avoid-c-arrays,
+  -cppcoreguidelines-avoid-c-arrays,
+  -hicpp-avoid-c-arrays,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -hicpp-no-array-decay,
+  -bugprone-easily-swappable-parameters,
+  -altera-id-dependent-backward-branch,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-type-vararg,
+  -hicpp-vararg"
 WarningsAsErrors: ''
 CheckOptions:
   - key: 'bugprone-argument-comment.StrictMode'

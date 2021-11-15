@@ -1,62 +1,99 @@
 #pragma once
 
+#include <optional>
+
+#include <fmt/format.h>
+
 #include "shared.h"
 
-class client_thread {
+class ClientThread {
 public:
-  void connect_to_the_server(int port, char * hostname) {
-    struct hostent * he;
-    if ((he = gethostbyname(hostname)) == NULL) {
+  void connect_to_the_server(int port, char const * hostname) {
+    // NOLINTNEXTLINE(concurrency-mt-unsafe)
+    hostent * he = gethostbyname(hostname);
+    if (he == nullptr) {
+      // NOLINTNEXTLINE(concurrency-mt-unsafe)
       exit(1);
     }
 
-    // connector.s address information
-    struct sockaddr_in their_addr;
-
     //***************************block of code finds the localhost IP
-    char hostn[400];  // placeholder for the hostname
+    constexpr auto max_hostname_length = 512ULL;
+    char hostn[max_hostname_length];  // placeholder for the hostname
 
-    struct hostent * hostIP;  // placeholder for the IP address
+    //    hostent * hostIP;  // placeholder for the IP address
 
     // if the gethostname returns a name then the program will get the ip
     // address using gethostbyname
     if ((gethostname(hostn, sizeof(hostn))) == 0) {
-      hostIP = gethostbyname(hostn);  // the netdb.h function gethostbyname
+      //     hostIP = gethostbyname(hostn);  // the netdb.h function
+      //     gethostbyname
     } else {
-      printf("ERROR:FC4539 - IP Address not found.");  // error if the hostname
-                                                       // is not found
+      fmt::print(
+          "ERROR:FC4539 - IP Address not found.\n");  // error if the hostname
+                                                      // is not found
     }
     //****************************************************************
 
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-      perror("socket");
+      fmt::print("socket\n");
+      // NOLINTNEXTLINE(concurrency-mt-unsafe)
       exit(1);
     }
 
+    // connector.s address information
+    sockaddr_in their_addr {};
     their_addr.sin_family = AF_INET;
     their_addr.sin_port = htons(port);
-    their_addr.sin_addr = *((struct in_addr *)he->h_addr);
-    memset(&(their_addr.sin_zero), 0, 8);
+    their_addr.sin_addr = *(reinterpret_cast<in_addr *>(he->h_addr));
+    memset(&(their_addr.sin_zero), 0, sizeof(their_addr.sin_zero));
 
-    if (connect(sockfd, (struct sockaddr *)&their_addr, sizeof(struct sockaddr))
+    if (connect(sockfd,
+                reinterpret_cast<sockaddr *>(&their_addr),
+                sizeof(struct sockaddr))
         == -1) {
-      perror("connect");
+      // NOLINTNEXTLINE(concurrency-mt-unsafe)
+      fmt::print("connect");
+      // NOLINTNEXTLINE(concurrency-mt-unsafe)
       exit(1);
     }
   }
 
-  void sent_request(char * request, size_t size) {
-    int numbytes;
-    if ((numbytes = secure_send(sockfd, request, size)) == -1) {
-      std::cout << std::strerror(errno) << "\n";
+  void sent_request(char * request, size_t size) const {
+    if (auto numbytes = secure_send(sockfd, request, size); !numbytes) {
+      // NOLINTNEXTLINE(concurrency-mt-unsafe)
+      fmt::print("{}\n", std::strerror(errno));
+      // NOLINTNEXTLINE(concurrency-mt-unsafe)
       exit(1);
     }
   }
 
-  ~client_thread() { ::close(sockfd); }
+  ClientThread() = default;
+  ClientThread(int port, char const * hostname) {
+    connect_to_the_server(port, hostname);
+  }
+
+  ClientThread(ClientThread const &) = delete;
+  auto operator=(ClientThread const &) -> ClientThread & = delete;
+
+  ClientThread(ClientThread && other) noexcept
+      : sockfd(other.sockfd) {
+    other.sockfd = -1;
+  }
+
+  auto operator=(ClientThread && other) noexcept -> ClientThread & {
+    sockfd = other.sockfd;
+    other.sockfd = -1;
+    return *this;
+  }
+
+  ~ClientThread() {
+    if (sockfd != -1) {
+      ::close(sockfd);
+    }
+  }
 
 private:
-  int sockfd;
+  int sockfd = -1;
   /**
    *  * It constructs the message to be sent.
    *   * It takes as arguments a destination char ptr, the payload (data to be
@@ -68,8 +105,10 @@ private:
    *        *
    *         *
    *          */
-  void construct_message(char * dst, char * payload, size_t payload_size) {
-    convertIntToByteArray(dst, payload_size);
+  static void construct_message(char * dst,
+                                char * payload,
+                                size_t payload_size) {
+    convert_int_to_byte_array(dst, payload_size);
     ::memcpy(dst + 4, payload, payload_size);
   }
 
@@ -77,9 +116,10 @@ private:
    *  * Sends to the connection defined by the fd, a message with a payload
    * (data) of size len bytes.
    *   */
-  int secure_send(int fd, char * data, size_t len) {
-    int64_t bytes = 0;
-    int64_t remaining_bytes = len + 4;
+  static auto secure_send(int fd, char * data, size_t len)
+      -> std::optional<size_t> {
+    auto bytes = 0LL;
+    auto remaining_bytes = len + 4;
 
     std::unique_ptr<char[]> buf = std::make_unique<char[]>(len + 4);
     construct_message(buf.get(), data, len);
@@ -92,6 +132,7 @@ private:
         // applied
         //             return -1;
         //
+        return std::nullopt;
       }
       remaining_bytes -= bytes;
       tmp += bytes;
