@@ -99,7 +99,8 @@ jobs:
 
     strategy:
       matrix:
-        os: [macos, ubuntu, windows]
+        os: [ubuntu]
+#        os: [macos, ubuntu, windows]
 
     runs-on: ${{ matrix.os }}-latest
 
@@ -110,18 +111,26 @@ jobs:
       if: matrix.os == 'ubuntu'
       run: sudo apt-get install clang-tidy cppcheck -y -q
 
+    - name: Install protobuf
+      if: matrix.os == 'ubuntu' 
+      run: sudo apt install libprotobuf-dev libprotoc-dev protobuf-compiler -y -q
+
+    - name: Install fmt
+      if: matrix.os == 'ubuntu'
+      run: sudo apt install libfmt-dev
+
     - name: Configure
       run: cmake --preset=ci-${{ matrix.os }}
 
     - name: Build
-      run: cmake --build build --config Release -j 2
+      run: cmake --build build --config Release -j 4
 
     - name: Install
       run: cmake --install build --config Release --prefix prefix
 
     - name: Test
       working-directory: build
-      run: ctest --output-on-failure -C Release -j 2
+      run: ctest --output-on-failure -C Release -j 4
 
   docs:
     # Deploy docs only when builds succeed
