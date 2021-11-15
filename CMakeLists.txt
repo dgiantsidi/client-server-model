@@ -44,7 +44,7 @@ target_compile_features(clt-svr_lib PUBLIC cxx_std_20)
 
 # ---- Declare executables ----
 
-add_executable(svr source/server.cc)
+add_executable(svr source/server.cpp)
 add_executable(clt-svr::svr ALIAS svr)
 
 set_target_properties(
@@ -60,7 +60,7 @@ target_link_libraries(svr PRIVATE clt-svr_lib
     fmt::fmt
     Threads::Threads)
 
-add_executable(clt source/client.cc)
+add_executable(clt source/client.cpp)
 add_executable(clt-svr::clt ALIAS clt)
 
 set_target_properties(
