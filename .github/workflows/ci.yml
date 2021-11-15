@@ -162,8 +162,8 @@ jobs:
       if: matrix.os == 'ubuntu' && steps.cache-protobuf.outputs.cache-hit != 'true'
       run: |
         git clone https://github.com/protocolbuffers/protobuf.git
-        git checkout tags/v3.19.1
         cd protobuf
+        git checkout tags/v3.19.1
         git submodule update --init --recursive
         ./autogen.sh
         ./autogen.sh
