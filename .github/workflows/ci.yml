@@ -111,9 +111,29 @@ jobs:
       if: matrix.os == 'ubuntu'
       run: sudo apt-get install clang-tidy cppcheck -y -q
 
+    - name: Build protobuf
+      id: build-protobuf
+      uses: actions/cache@v1
+      with:
+        path: protobuf
+        key: ${{ runner.os }}-protobuf
+      if: matrix.os == 'ubuntu' && steps.cache-protobuf.outputs.cache-hit != 'true'
+      run: |
+        git clone https://github.com/protocolbuffers/protobuf.git
+        cd protobuf
+        git submodule update --init --recursive
+        ./autogen.sh
+        ./autogen.sh
+        ./configure
+        make
+        make check 
+    
     - name: Install protobuf
-      if: matrix.os == 'ubuntu' 
-      run: sudo apt install libprotobuf-dev libprotoc-dev protobuf-compiler -y -q
+      run: |
+        cd protobuf
+        sudo make install
+        sudo ldconfig
+
 
     - name: Install fmt
       if: matrix.os == 'ubuntu'
