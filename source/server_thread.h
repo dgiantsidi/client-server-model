@@ -26,7 +26,7 @@ class server_thread {
 
         void update_connections(int new_sock_fd) {
             {
-                std::unique_lock<std::mutex> lock(mtx);
+                std::lock_guard lock(mtx);
                 listening_sockets.push_back(new_sock_fd);
             }
             cv.notify_one();
@@ -35,7 +35,7 @@ class server_thread {
 
         int incomming_requests()
         {
-            struct timeval tv;
+            timeval tv;
             tv.tv_sec = 10;
             tv.tv_usec = 0;
             int retval = -1;
@@ -53,7 +53,7 @@ class server_thread {
 
         void cleanup_connection(int dead_connection) {
             // cleanup connection 
-            std::unique_lock<std::mutex> lock(mtx);
+            std::lock_guard lock(mtx);
             auto it = std::find(listening_sockets.begin(), listening_sockets.end(), dead_connection);
             listening_sockets.erase(it);
             std::cout << __PRETTY_FUNCTION__ << ": " << dead_connection << "\n";
@@ -64,11 +64,11 @@ class server_thread {
         {
             std::vector<int> lsockets;
             {
-                std::unique_lock<std::mutex> lock(mtx);
-                lsockets = listening_sockets;
+                std::lock_guard lock(mtx);
+                lsockets = listening_sockets; //this is weird, you create a copy but do not delete old vector?
             }
             uint64_t bytecount = 0;
-            std::unique_ptr<char[]> buffer;
+            std::unique_ptr<char[]> buffer; //TODO how big do we expect to get this, why not use stack?
             for (auto csock : lsockets) {
                 if (FD_ISSET(csock, &rfds)) {
                     if ((bytecount = secure_recv(csock, buffer))  <= 0) {
