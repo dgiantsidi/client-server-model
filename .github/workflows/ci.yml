@@ -76,6 +76,41 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v1
+      with:
+        version: '3.17.3'
+
+#    - name: Cache protobuf
+#      id: build-protobuf
+#      uses: actions/cache@v1
+#      with:
+#        path: protobuf
+#        key: ${{ runner.os }}-protobuf
+#
+#    - name: Build protobuf
+#      if: matrix.os == 'ubuntu' && steps.cache-protobuf.outputs.cache-hit != 'true'
+#      run: |
+#        git clone https://github.com/protocolbuffers/protobuf.git
+#        cd protobuf
+#        git submodule update --init --recursive
+#        ./autogen.sh
+#        ./autogen.sh
+#        ./configure
+#        make -j 4
+#        make check 
+    
+#    - name: Install protobuf
+#      run: |
+#        cd protobuf
+#        sudo make install
+#        sudo ldconfig
+
+
+    - name: Install fmt
+      if: matrix.os == 'ubuntu'
+      run: sudo apt install libfmt-dev
+
     - name: Configure
       env: { CXX: clang++-11 }
       run: cmake --preset=ci-sanitize
@@ -111,30 +146,36 @@ jobs:
       if: matrix.os == 'ubuntu'
       run: sudo apt-get install clang-tidy cppcheck -y -q
 
-    - name: Cache protobuf
-      id: build-protobuf
-      uses: actions/cache@v1
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v1
       with:
-        path: protobuf
-        key: ${{ runner.os }}-protobuf
+        version: '3.17.3'
 
-    - name: Build protobuf
-      if: matrix.os == 'ubuntu' && steps.cache-protobuf.outputs.cache-hit != 'true'
-      run: |
-        git clone https://github.com/protocolbuffers/protobuf.git
-        cd protobuf
-        git submodule update --init --recursive
-        ./autogen.sh
-        ./autogen.sh
-        ./configure
-        make
-        make check 
-    
-    - name: Install protobuf
-      run: |
-        cd protobuf
-        sudo make install
-        sudo ldconfig
+#    - name: Cache protobuf
+#      id: build-protobuf
+#      uses: actions/cache@v1
+#      with:
+#        path: protobuf
+#        key: ${{ runner.os }}-protobuf
+#
+#    - name: Build protobuf
+#      if: matrix.os == 'ubuntu' && steps.cache-protobuf.outputs.cache-hit != 'true'
+#      run: |
+#        git clone https://github.com/protocolbuffers/protobuf.git
+#        git checkout 
+#        cd protobuf
+#        git submodule update --init --recursive
+#        ./autogen.sh
+#        ./autogen.sh
+#        ./configure
+#        make -j 2
+#        make check 
+#    
+#    - name: Install protobuf
+#      run: |
+#        cd protobuf
+#        sudo make install
+#        sudo ldconfig
 
 
     - name: Install fmt
@@ -145,14 +186,14 @@ jobs:
       run: cmake --preset=ci-${{ matrix.os }}
 
     - name: Build
-      run: cmake --build build --config Release -j 4
+      run: cmake --build build --config Release -j 2
 
     - name: Install
       run: cmake --install build --config Release --prefix prefix
 
     - name: Test
       working-directory: build
-      run: ctest --output-on-failure -C Release -j 4
+      run: ctest --output-on-failure -C Release -j 2
 
   docs:
     # Deploy docs only when builds succeed

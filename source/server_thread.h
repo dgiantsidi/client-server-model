@@ -7,6 +7,7 @@
 #include <thread>
 
 #include <fmt/format.h>
+#include <unistd.h>
 
 #include "callback.h"
 #include "shared.h"
@@ -160,6 +161,8 @@ private:
     return actual_msg_size;
   }
 
+  // FIXME change return type to tuple or even better some array wrapper...
+  // NOLINTNEXTLINE(google-runtime-references)
   static auto secure_recv(int fd, std::unique_ptr<char[]> & buf) -> uint32_t {
     int64_t bytes = 0;
     int64_t remaining_bytes = 4;
