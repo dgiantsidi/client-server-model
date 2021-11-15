@@ -37,18 +37,20 @@ static void processing_func(std::shared_ptr<class server_thread> args)
 int main(int args, char* argv[]) {
     if (args < 5) {
         std::cerr << "usage: ./server <nb_server_threads> <port>\n";
+        return 1;
     }
 
     nb_server_threads = std::atoi(argv[1]);
     port = std::atoi(argv[2]);
 
-    std::vector<std::shared_ptr<class server_thread>> server_threads;
+    //That type looks wrong, a vector of shared_ptrs?????
+    std::vector<std::shared_ptr<server_thread>> server_threads;
     server_threads.reserve(nb_server_threads);
     std::vector<std::thread> threads;
     threads.reserve(nb_server_threads);
 
     for (size_t i = 0; i < nb_server_threads; i++) {
-        auto ptr = std::make_shared<class server_thread>(i);
+        auto ptr = std::make_shared<server_thread>(i);
         server_threads.push_back(ptr);
         threads.emplace_back(std::thread(processing_func, server_threads[i]));
     }
@@ -57,10 +59,10 @@ int main(int args, char* argv[]) {
     int sockfd, new_fd; 
 
     /* my address information */
-    struct sockaddr_in my_addr; 
+    sockaddr_in my_addr; 
 
     /* connector.s address information */
-    struct sockaddr_in their_addr; 
+    sockaddr_in their_addr; 
     socklen_t sin_size;
 
     int ret = 1;
