@@ -109,7 +109,7 @@ jobs:
 
     - name: Install fmt
       if: matrix.os == 'ubuntu'
-      run: sudo apt install libfmt-dev
+      run: sudo apt install libfmt-dev libprotobuf-dev protobuf-compiler
 
     - name: Configure
       env: { CXX: clang++-11 }
@@ -180,7 +180,7 @@ jobs:
 
     - name: Install fmt
       if: matrix.os == 'ubuntu'
-      run: sudo apt install libfmt-dev prot
+      run: sudo apt install libfmt-dev
 
     - name: Configure
       run: cmake --preset=ci-${{ matrix.os }}
