@@ -25,22 +25,30 @@ find_package(fmt REQUIRED)
 
 # ---- Declare library ----
 
-include_directories(${Protobuf_INCLUDE_DIRS})
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
+include_directories(SYSTEM ${Protobuf_INCLUDE_DIRS})
+include_directories(SYSTEM ${CMAKE_CURRENT_BINARY_DIR})
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS source/client_message.proto)
 
 add_library(
-    clt-svr_lib OBJECT
+    clt-svr-proto_lib OBJECT
     ${PROTO_SRCS}
+    ${PROTO_HDRS}
 )
 
 target_include_directories(
-    clt-svr_lib ${warning_guard}
+    clt-svr-proto_lib ${warning_guard}
     PUBLIC
     "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/source>"
 )
 
-target_compile_features(clt-svr_lib PUBLIC cxx_std_20)
+target_compile_features(clt-svr-proto_lib PUBLIC cxx_std_20)
+
+set_target_properties(
+    clt-svr-proto_lib
+    PROPERTIES
+         CXX_CLANG_TIDY ""
+)
+
 
 # ---- Declare executables ----
 
@@ -55,7 +63,9 @@ set_target_properties(
 
 target_compile_features(svr PRIVATE cxx_std_20)
 
-target_link_libraries(svr PRIVATE clt-svr_lib
+target_link_libraries(svr
+    PRIVATE
+    $<TARGET_OBJECTS:clt-svr-proto_lib>
     ${Protobuf_LIBRARIES}
     fmt::fmt
     Threads::Threads)
@@ -71,7 +81,9 @@ set_target_properties(
 
 target_compile_features(clt PRIVATE cxx_std_20)
 
-target_link_libraries(clt PRIVATE clt-svr_lib
+target_link_libraries(clt
+    PRIVATE
+    $<TARGET_OBJECTS:clt-svr-proto_lib>
     ${Protobuf_LIBRARIES}
     fmt::fmt
     Threads::Threads)

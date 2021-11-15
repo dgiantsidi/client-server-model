@@ -5,7 +5,7 @@
 project(clt-svr-modelTests LANGUAGES CXX)
 
 add_executable(clt-svr-model_test source/clt-svr-model_test.cpp)
-target_link_libraries(clt-svr-model_test PRIVATE clt-svr_lib ${Protobuf_LIBRARIES})
+target_link_libraries(clt-svr-model_test PRIVATE clt-svr-proto_lib ${Protobuf_LIBRARIES})
 target_compile_features(clt-svr-model_test PRIVATE cxx_std_20)
 
 add_test(NAME clt-svr-model_test COMMAND clt-svr-model_test)
