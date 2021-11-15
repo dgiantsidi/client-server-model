@@ -146,10 +146,10 @@ jobs:
       if: matrix.os == 'ubuntu'
       run: sudo apt-get install clang-tidy cppcheck -y -q
 
-    - name: Install Protoc
-      uses: arduino/setup-protoc@v1
-      with:
-        version: '3.17.3'
+#    - name: Install Protoc
+#      uses: arduino/setup-protoc@v1
+#      with:
+#        version: '3.17.3'
 
     - name: Cache protobuf
       id: build-protobuf
@@ -162,7 +162,7 @@ jobs:
       if: matrix.os == 'ubuntu' && steps.cache-protobuf.outputs.cache-hit != 'true'
       run: |
         git clone https://github.com/protocolbuffers/protobuf.git
-        git checkout v3.19.1
+        git checkout tags/v3.19.1
         cd protobuf
         git submodule update --init --recursive
         ./autogen.sh
