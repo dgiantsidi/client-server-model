@@ -81,30 +81,31 @@ jobs:
 #     with:
 #        version: '3.17.3'
 
-#    - name: Cache protobuf
-#      id: build-protobuf
-#      uses: actions/cache@v1
-#      with:
-#        path: protobuf
-#        key: ${{ runner.os }}-protobuf
-#
-#    - name: Build protobuf
-#      if: matrix.os == 'ubuntu' && steps.cache-protobuf.outputs.cache-hit != 'true'
-#      run: |
-#        git clone https://github.com/protocolbuffers/protobuf.git
-#        cd protobuf
-#        git submodule update --init --recursive
-#        ./autogen.sh
-#        ./autogen.sh
-#        ./configure
-#        make -j 4
-#        make check 
+    - name: Cache protobuf
+      id: build-protobuf
+      uses: actions/cache@v1
+      with:
+        path: protobuf
+        key: ${{ runner.os }}-protobuf
+
+    - name: Build protobuf
+      if: matrix.os == 'ubuntu' && steps.cache-protobuf.outputs.cache-hit != 'true'
+      run: |
+        git clone https://github.com/protocolbuffers/protobuf.git
+        cd protobuf
+        git checkout tags/v3.19.1
+        git submodule update --init --recursive
+        ./autogen.sh
+        ./autogen.sh
+        ./configure
+        make -j 2
+        make check 
     
-#    - name: Install protobuf
-#      run: |
-#        cd protobuf
-#        sudo make install
-#        sudo ldconfig
+    - name: Install protobuf
+      run: |
+        cd protobuf
+        sudo make install
+        sudo ldconfig
 
 
     - name: Install fmt
