@@ -17,8 +17,14 @@
  **/
 inline auto convertByteArrayToInt(char * b) noexcept -> uint32_t {
   if constexpr (LITTLE_ENDIAN) {
+#if defined(__GNUC__)
+    uint32_t res;
+    memcpy(&res, b, sizeof(res));
+    return __builtin_bswap32(res);
+#else  // defined(__GNUC__)
     return (b[0] << 24) + ((b[1] & 0xFF) << 16) + ((b[2] & 0xFF) << 8)
         + (b[3] & 0xFF);
+#endif  // defined(__GNUC__)
   }
   uint32_t result;
   memcpy(&result, b, sizeof(result));
@@ -31,11 +37,16 @@ inline auto convertByteArrayToInt(char * b) noexcept -> uint32_t {
  *    */
 inline auto convertIntToByteArray(char * dst, uint32_t sz) noexcept -> void {
   if constexpr (LITTLE_ENDIAN) {
+#if defined(__GNUC__)
+    auto tmp = __builtin_bswap32(sz);
+    memcpy(dst, &tmp, sizeof(tmp));
+#else  // defined(__GNUC__)
     auto tmp = dst;
     tmp[0] = (sz >> 24) & 0xFF;
     tmp[1] = (sz >> 16) & 0xFF;
     tmp[2] = (sz >> 8) & 0xFF;
     tmp[3] = sz & 0xFF;
+#endif  // defined(__GNUC__)
   } else {  // BIG_ENDIAN
     memcpy(dst, &sz, sizeof(sz));
   }
