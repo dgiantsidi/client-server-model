@@ -109,7 +109,7 @@ jobs:
 
     - name: Install fmt
       if: matrix.os == 'ubuntu'
-      run: sudo apt install libfmt-dev libprotobuf-dev protobuf-compiler
+      run: sudo apt install libfmt-dev
 
     - name: Configure
       env: { CXX: clang++-11 }
@@ -144,38 +144,38 @@ jobs:
 
     - name: Install static analyzers
       if: matrix.os == 'ubuntu'
-      run: sudo apt-get install clang-tidy cppcheck libprotobuf-dev protobuf-compiler -y -q
+      run: sudo apt-get install clang-tidy cppcheck -y -q
 
-    #- name: Install Protoc
-    #  uses: arduino/setup-protoc@v1
-    #  with:
-    #    version: '3.17.3'
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v1
+      with:
+        version: '3.17.3'
 
-#    - name: Cache protobuf
-#      id: build-protobuf
-#      uses: actions/cache@v1
-#      with:
-#        path: protobuf
-#        key: ${{ runner.os }}-protobuf
-#
-#    - name: Build protobuf
-#      if: matrix.os == 'ubuntu' && steps.cache-protobuf.outputs.cache-hit != 'true'
-#      run: |
-#        git clone https://github.com/protocolbuffers/protobuf.git
-#        git checkout 
-#        cd protobuf
-#        git submodule update --init --recursive
-#        ./autogen.sh
-#        ./autogen.sh
-#        ./configure
-#        make -j 2
-#        make check 
-#    
-#    - name: Install protobuf
-#      run: |
-#        cd protobuf
-#        sudo make install
-#        sudo ldconfig
+    - name: Cache protobuf
+      id: build-protobuf
+      uses: actions/cache@v1
+      with:
+        path: protobuf
+        key: ${{ runner.os }}-protobuf
+
+    - name: Build protobuf
+      if: matrix.os == 'ubuntu' && steps.cache-protobuf.outputs.cache-hit != 'true'
+      run: |
+        git clone https://github.com/protocolbuffers/protobuf.git
+        git checkout v3.19.1
+        cd protobuf
+        git submodule update --init --recursive
+        ./autogen.sh
+        ./autogen.sh
+        ./configure
+        make -j 2
+        make check 
+    
+    - name: Install protobuf
+      run: |
+        cd protobuf
+        sudo make install
+        sudo ldconfig
 
 
     - name: Install fmt
