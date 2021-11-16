@@ -39,7 +39,10 @@ std::string const random_string =
 // NOLINTNEXTLINE (cppcoreguidelines-avoid-non-const-global-variables)
 std::atomic<uint32_t> global_number {0};
 
-auto get_operation(size_t & size) -> std::unique_ptr<char[]> {
+//TODO Remove code duplications
+auto get_operation() -> std::pair<size_t, std::unique_ptr<char[]>> {
+  constexpr auto length_size_field = sizeof(uint32_t);
+  //FIXME that seems very expensive having two variables with mutexes attached to them...
   static auto i = 0ULL;
   static auto j = 1ULL;
   constexpr auto max_n_operation = 100ULL;
@@ -60,16 +63,14 @@ auto get_operation(size_t & size) -> std::unique_ptr<char[]> {
 
     std::string msg_str;
     msg.SerializeToString(&msg_str);
-    char number[4];
+    char number[length_size_field];
     size_t sz = msg_str.size();
     convert_int_to_byte_array(number, sz);
-    std::unique_ptr<char[]> buf = std::make_unique<char[]>(sz + 4);
-    ::memcpy(buf.get(), number, 4);
+    std::unique_ptr<char[]> buf = std::make_unique<char[]>(sz + length_size_field);
+    ::memcpy(buf.get(), number, length_size_field);
 
-    ::memcpy(buf.get() + 4, msg_str.c_str(), sz);
-    size = sz + 4;
-
-    return buf;
+    ::memcpy(buf.get() + length_size_field, msg_str.c_str(), sz);
+    return {sz + length_size_field, std::move(buf)};
   }
   if (i % 3 == 1) {
     i++;
@@ -84,14 +85,13 @@ auto get_operation(size_t & size) -> std::unique_ptr<char[]> {
     std::string msg_str;
     msg.SerializeToString(&msg_str);
 
-    char number[4];
+    char number[length_size_field];
     size_t sz = msg_str.size();
     convert_int_to_byte_array(number, sz);
-    std::unique_ptr<char[]> buf = std::make_unique<char[]>(sz + 4);
-    ::memcpy(buf.get(), number, 4);
-    ::memcpy(buf.get() + 4, msg_str.c_str(), sz);
-    size = sz + 4;
-    return buf;
+    std::unique_ptr<char[]> buf = std::make_unique<char[]>(sz + length_size_field);
+    ::memcpy(buf.get(), number, length_size_field);
+    ::memcpy(buf.get() + length_size_field, msg_str.c_str(), sz);
+    return {sz + length_size_field, std::move(buf)};
   }
 
   i++;
@@ -105,14 +105,13 @@ auto get_operation(size_t & size) -> std::unique_ptr<char[]> {
   std::string msg_str;
   msg.SerializeToString(&msg_str);
 
-  char number[4];
+  char number[length_size_field];
   size_t sz = msg_str.size();
   convert_int_to_byte_array(number, sz);
-  std::unique_ptr<char[]> buf = std::make_unique<char[]>(sz + 4);
-  ::memcpy(buf.get(), number, 4);
-  ::memcpy(buf.get() + 4, msg_str.c_str(), sz);
-  size = sz + 4;
-  return buf;
+  std::unique_ptr<char[]> buf = std::make_unique<char[]>(sz + length_size_field);
+  ::memcpy(buf.get(), number, length_size_field);
+  ::memcpy(buf.get() + length_size_field, msg_str.c_str(), sz);
+  return {sz + length_size_field, std::move(buf)};
 }
 
 void client(int port, int nb_messages) {
@@ -120,8 +119,7 @@ void client(int port, int nb_messages) {
 
   c_thread.connect_to_the_server(port, "localhost");
   for (auto iterations = nb_messages; iterations > 0; --iterations) {
-    size_t size = 0;
-    std::unique_ptr<char[]> buf = get_operation(size);
+    auto [size, buf] = get_operation();
     c_thread.sent_request(buf.get(), size);
   }
 }
