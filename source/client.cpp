@@ -39,6 +39,24 @@ std::string const random_string =
 // NOLINTNEXTLINE (cppcoreguidelines-avoid-non-const-global-variables)
 std::atomic<uint32_t> global_number {0};
 
+
+void get_operation_add(sockets::client_msg::OperationData * operation_data) {
+  operation_data->set_argument(1);
+  global_number.fetch_add(1);
+  operation_data->set_type(sockets::client_msg::ADD);
+}
+
+void get_operation_sub(sockets::client_msg::OperationData * operation_data) {
+  operation_data->set_argument(1);
+  global_number.fetch_sub(1);
+  operation_data->set_type(sockets::client_msg::SUB);
+}
+
+void get_operation_random(sockets::client_msg::OperationData * operation_data) {
+  operation_data->set_argument(1);
+  operation_data->set_type(sockets::client_msg::RANDOM_DATA);
+}
+
 // TODO Remove code duplications
 auto get_operation() -> std::pair<size_t, std::unique_ptr<char[]>> {
   constexpr auto length_size_field = sizeof(uint32_t);
@@ -51,57 +69,25 @@ auto get_operation() -> std::pair<size_t, std::unique_ptr<char[]>> {
     j = 0;
   }
 
+  auto operation_func = [](auto i) {
+    switch (i % 3) {
+      case 0:
+        return get_operation_add;
+      case 1:
+        return get_operation_sub;
+      case 2:
+        return get_operation_random;
+      default:
+        return get_operation_add;
+    }
+  }(i);
+
   sockets::client_msg msg;
-  if (i % 3 == 0) {
-    i++;
-    for (auto k = 0ULL; k < j; k++) {
-      sockets::client_msg::OperationData * op = msg.add_ops();
-      op->set_argument(1);
-      global_number.fetch_add(1);
-      op->set_type(sockets::client_msg::ADD);
-    }
-    j++;
-
-    std::string msg_str;
-    msg.SerializeToString(&msg_str);
-    char number[length_size_field];
-    size_t sz = msg_str.size();
-    convert_int_to_byte_array(number, sz);
-    std::unique_ptr<char[]> buf =
-        std::make_unique<char[]>(sz + length_size_field);
-    ::memcpy(buf.get(), number, length_size_field);
-
-    ::memcpy(buf.get() + length_size_field, msg_str.c_str(), sz);
-    return {sz + length_size_field, std::move(buf)};
-  }
-  if (i % 3 == 1) {
-    i++;
-    for (auto k = 0ULL; k < j; k++) {
-      sockets::client_msg::OperationData * op = msg.add_ops();
-      op->set_argument(1);
-      global_number.fetch_sub(1);
-      op->set_type(sockets::client_msg::SUB);
-    }
-    j++;
-
-    std::string msg_str;
-    msg.SerializeToString(&msg_str);
-
-    char number[length_size_field];
-    size_t sz = msg_str.size();
-    convert_int_to_byte_array(number, sz);
-    std::unique_ptr<char[]> buf =
-        std::make_unique<char[]>(sz + length_size_field);
-    ::memcpy(buf.get(), number, length_size_field);
-    ::memcpy(buf.get() + length_size_field, msg_str.c_str(), sz);
-    return {sz + length_size_field, std::move(buf)};
-  }
 
   i++;
   for (auto k = 0ULL; k < j; k++) {
     sockets::client_msg::OperationData * op = msg.add_ops();
-    op->set_random_data(random_string);
-    op->set_type(sockets::client_msg::RANDOM_DATA);
+    operation_func(op);
   }
   j++;
 
