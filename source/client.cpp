@@ -30,84 +30,90 @@
 #include "client_thread.h"
 #include "shared.h"
 
-// NOLINTNEXTLINE (cert-err58-cpp)
-std::string const random_string =
-    "llllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll"
-    "llllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll"
-    "llllllllllllllllllll";
+class ClientOP {
+  static constexpr auto max_n_operations = 100ULL;
+  static constexpr auto length_size_field = sizeof(uint32_t);
+  // NOLINTNEXTLINE (cert-err58-cpp)
+  static inline std::string const random_string =
+      "llllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll"
+      "llllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll"
+      "llllllllllllllllllllllll";
+  // NOLINTNEXTLINE (cppcoreguidelines-avoid-non-const-global-variables)
+  std::atomic<size_t> global_number {0ULL};
+  std::atomic<size_t> number_of_iterations {0ULL};
+  std::atomic<size_t> number_of_requests {1ULL};
 
-// NOLINTNEXTLINE (cppcoreguidelines-avoid-non-const-global-variables)
-std::atomic<uint32_t> global_number {0};
-
-void get_operation_add(sockets::client_msg::OperationData * operation_data) {
-  operation_data->set_argument(1);
-  global_number.fetch_add(1);
-  operation_data->set_type(sockets::client_msg::ADD);
-}
-
-void get_operation_sub(sockets::client_msg::OperationData * operation_data) {
-  operation_data->set_argument(1);
-  global_number.fetch_sub(1);
-  operation_data->set_type(sockets::client_msg::SUB);
-}
-
-void get_operation_random(sockets::client_msg::OperationData * operation_data) {
-  operation_data->set_argument(1);
-  operation_data->set_type(sockets::client_msg::RANDOM_DATA);
-}
-
-auto get_operation() -> std::pair<size_t, std::unique_ptr<char[]>> {
-  constexpr auto length_size_field = sizeof(uint32_t);
-  // FIXME that seems very expensive having two variables with mutexes attached
-  // to them...
-  static auto i = 0ULL;
-  static auto j = 1ULL;
-  constexpr auto max_n_operation = 100ULL;
-  if (j > max_n_operation) {
-    j = 0;
+  void get_operation_add(sockets::client_msg::OperationData * operation_data) {
+    operation_data->set_argument(1);
+    global_number.fetch_add(1);
+    operation_data->set_type(sockets::client_msg::ADD);
   }
 
-  auto operation_func = [](auto i) {
-    switch (i % 3) {
-      case 0:
-        return get_operation_add;
-      case 1:
-        return get_operation_sub;
-      case 2:
-        return get_operation_random;
-      default:
-        return get_operation_add;
+  void get_operation_sub(sockets::client_msg::OperationData * operation_data) {
+    operation_data->set_argument(1);
+    global_number.fetch_sub(1);
+    operation_data->set_type(sockets::client_msg::SUB);
+  }
+
+  // NOLINTNEXTLINE (readablitiy-convert-member-functions-to-static)
+  void get_operation_random(
+      sockets::client_msg::OperationData * operation_data) {
+    operation_data->set_random_data(random_string);
+    operation_data->set_type(sockets::client_msg::RANDOM_DATA);
+  }
+
+  auto get_number_of_requests() -> size_t {
+    auto res = number_of_requests.load(std::memory_order_relaxed);
+    while (!number_of_requests.compare_exchange_weak(
+        res,
+        res < max_n_operations ? res + 1 : 0ULL,
+        std::memory_order_acq_rel,
+        std::memory_order_relaxed)) {}
+    return res;
+  }
+
+public:
+  auto get_operation() -> std::pair<size_t, std::unique_ptr<char[]>> {
+    auto i = number_of_iterations.fetch_add(1ULL, std::memory_order_relaxed);
+    auto j = get_number_of_requests();
+
+    auto operation_func = [i] {
+      switch (i % 3) {
+        case 0:
+          return &ClientOP::get_operation_add;
+        case 1:
+          return &ClientOP::get_operation_sub;
+        case 2:
+          return &ClientOP::get_operation_random;
+        default:
+          throw std::runtime_error("Unknown operation");
+      }
+    }();
+
+    sockets::client_msg msg;
+
+    for (auto k = 0ULL; k < j; ++k) {
+      auto * operation_data = msg.add_ops();
+      (this->*operation_func)(operation_data);
     }
-  }(i);
 
-  sockets::client_msg msg;
+    std::string msg_str;
+    msg.SerializeToString(&msg_str);
 
-  i++;
-  for (auto k = 0ULL; k < j; k++) {
-    sockets::client_msg::OperationData * op = msg.add_ops();
-    operation_func(op);
+    auto msg_size = msg_str.size();
+    auto buf = std::make_unique<char[]>(msg_size + length_size_field);
+    convert_int_to_byte_array(buf.get(), msg_size);
+    memcpy(buf.get() + length_size_field, msg_str.data(), msg_size);
+    return {msg_size + length_size_field, std::move(buf)};
   }
-  j++;
+};
 
-  std::string msg_str;
-  msg.SerializeToString(&msg_str);
-
-  char number[length_size_field];
-  size_t sz = msg_str.size();
-  convert_int_to_byte_array(number, sz);
-  std::unique_ptr<char[]> buf =
-      std::make_unique<char[]>(sz + length_size_field);
-  ::memcpy(buf.get(), number, length_size_field);
-  ::memcpy(buf.get() + length_size_field, msg_str.c_str(), sz);
-  return {sz + length_size_field, std::move(buf)};
-}
-
-void client(int port, int nb_messages) {
+void client(ClientOP * client_op, int port, int nb_messages) {
   ClientThread c_thread {};
 
   c_thread.connect_to_the_server(port, "localhost");
   for (auto iterations = nb_messages; iterations > 0; --iterations) {
-    auto [size, buf] = get_operation();
+    auto [size, buf] = client_op->get_operation();
     c_thread.sent_request(buf.get(), size);
   }
 }
@@ -126,9 +132,10 @@ auto main(int args, char * argv[]) -> int {
 
   // creating the client threads
   std::vector<std::thread> threads;
+  ClientOP client_op;
 
   for (size_t i = 0; i < nb_clients; i++) {
-    threads.emplace_back(client, port, nb_messages);
+    threads.emplace_back(client, &client_op, port, nb_messages);
   }
 
   for (auto & thread : threads) {
