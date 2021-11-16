@@ -39,7 +39,6 @@ std::string const random_string =
 // NOLINTNEXTLINE (cppcoreguidelines-avoid-non-const-global-variables)
 std::atomic<uint32_t> global_number {0};
 
-
 void get_operation_add(sockets::client_msg::OperationData * operation_data) {
   operation_data->set_argument(1);
   global_number.fetch_add(1);
@@ -57,7 +56,6 @@ void get_operation_random(sockets::client_msg::OperationData * operation_data) {
   operation_data->set_type(sockets::client_msg::RANDOM_DATA);
 }
 
-// TODO Remove code duplications
 auto get_operation() -> std::pair<size_t, std::unique_ptr<char[]>> {
   constexpr auto length_size_field = sizeof(uint32_t);
   // FIXME that seems very expensive having two variables with mutexes attached
