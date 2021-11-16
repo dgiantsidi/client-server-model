@@ -39,10 +39,11 @@ std::string const random_string =
 // NOLINTNEXTLINE (cppcoreguidelines-avoid-non-const-global-variables)
 std::atomic<uint32_t> global_number {0};
 
-//TODO Remove code duplications
+// TODO Remove code duplications
 auto get_operation() -> std::pair<size_t, std::unique_ptr<char[]>> {
   constexpr auto length_size_field = sizeof(uint32_t);
-  //FIXME that seems very expensive having two variables with mutexes attached to them...
+  // FIXME that seems very expensive having two variables with mutexes attached
+  // to them...
   static auto i = 0ULL;
   static auto j = 1ULL;
   constexpr auto max_n_operation = 100ULL;
@@ -66,7 +67,8 @@ auto get_operation() -> std::pair<size_t, std::unique_ptr<char[]>> {
     char number[length_size_field];
     size_t sz = msg_str.size();
     convert_int_to_byte_array(number, sz);
-    std::unique_ptr<char[]> buf = std::make_unique<char[]>(sz + length_size_field);
+    std::unique_ptr<char[]> buf =
+        std::make_unique<char[]>(sz + length_size_field);
     ::memcpy(buf.get(), number, length_size_field);
 
     ::memcpy(buf.get() + length_size_field, msg_str.c_str(), sz);
@@ -88,7 +90,8 @@ auto get_operation() -> std::pair<size_t, std::unique_ptr<char[]>> {
     char number[length_size_field];
     size_t sz = msg_str.size();
     convert_int_to_byte_array(number, sz);
-    std::unique_ptr<char[]> buf = std::make_unique<char[]>(sz + length_size_field);
+    std::unique_ptr<char[]> buf =
+        std::make_unique<char[]>(sz + length_size_field);
     ::memcpy(buf.get(), number, length_size_field);
     ::memcpy(buf.get() + length_size_field, msg_str.c_str(), sz);
     return {sz + length_size_field, std::move(buf)};
@@ -108,7 +111,8 @@ auto get_operation() -> std::pair<size_t, std::unique_ptr<char[]>> {
   char number[length_size_field];
   size_t sz = msg_str.size();
   convert_int_to_byte_array(number, sz);
-  std::unique_ptr<char[]> buf = std::make_unique<char[]>(sz + length_size_field);
+  std::unique_ptr<char[]> buf =
+      std::make_unique<char[]>(sz + length_size_field);
   ::memcpy(buf.get(), number, length_size_field);
   ::memcpy(buf.get() + length_size_field, msg_str.c_str(), sz);
   return {sz + length_size_field, std::move(buf)};

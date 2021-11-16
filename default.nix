@@ -6,6 +6,7 @@ stdenv.mkDerivation {
   src = ./.;
   
   buildInputs = [
+    codespell
     clang-tools
     cppcheck
     bashInteractive
