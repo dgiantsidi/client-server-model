@@ -39,17 +39,18 @@ class ClientOP {
       "llllllllllllllllllllllll";
   std::atomic<size_t> global_number {0ULL};
   std::atomic<size_t> number_of_iterations {0ULL};
+  //FIXME I am pretty sure this is not necessary
   std::atomic<size_t> number_of_requests {1ULL};
 
   void get_operation_add(sockets::client_msg::OperationData * operation_data) {
     operation_data->set_argument(1);
-    global_number.fetch_add(1);
+    global_number.fetch_add(1, std::memory_order_relaxed);
     operation_data->set_type(sockets::client_msg::ADD);
   }
 
   void get_operation_sub(sockets::client_msg::OperationData * operation_data) {
     operation_data->set_argument(1);
-    global_number.fetch_sub(1);
+    global_number.fetch_sub(1, std::memory_order_relaxed);
     operation_data->set_type(sockets::client_msg::SUB);
   }
 
@@ -75,6 +76,7 @@ public:
     auto i = number_of_iterations.fetch_add(1ULL, std::memory_order_relaxed);
     auto j = get_number_of_requests();
 
+    //We could move the switch into the loop and make the code somewhat simpler, however we would rely on the compiler to optimize the code
     auto operation_func = [i] {
       switch (i % 3) {
         case 0:

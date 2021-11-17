@@ -14,8 +14,8 @@
 static constexpr auto length_size_field = sizeof(uint32_t);
 
 /**
- *  * It takes as an argument a ptr to an array of size 4 or bigger and
- *  * converts the char array into an integer.
+ ** It takes as an argument a ptr to an array of size 4 or bigger and
+ ** converts the char array into an integer.
  **/
 inline auto convert_byte_array_to_int(char * b) noexcept -> uint32_t {
   if constexpr (LITTLE_ENDIAN) {
@@ -34,9 +34,9 @@ inline auto convert_byte_array_to_int(char * b) noexcept -> uint32_t {
 }
 
 /**
- *  * It takes as arguments one char[] array of 4 or bigger size and an integer.
- *   * It converts the integer into a byte array.
- *    */
+ ** It takes as arguments one char[] array of 4 or bigger size and an integer.
+ ** It converts the integer into a byte array.
+ **/
 inline auto convert_int_to_byte_array(char * dst, uint32_t sz) noexcept
     -> void {
   if constexpr (LITTLE_ENDIAN) {
