@@ -11,6 +11,8 @@
 #  endif
 #endif
 
+static constexpr auto length_size_field = sizeof(uint32_t);
+
 /**
  *  * It takes as an argument a ptr to an array of size 4 or bigger and
  *  * converts the char array into an integer.

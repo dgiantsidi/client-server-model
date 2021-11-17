@@ -32,13 +32,11 @@
 
 class ClientOP {
   static constexpr auto max_n_operations = 100ULL;
-  static constexpr auto length_size_field = sizeof(uint32_t);
   // NOLINTNEXTLINE (cert-err58-cpp)
   static inline std::string const random_string =
       "llllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll"
       "llllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll"
       "llllllllllllllllllllllll";
-  // NOLINTNEXTLINE (cppcoreguidelines-avoid-non-const-global-variables)
   std::atomic<size_t> global_number {0ULL};
   std::atomic<size_t> number_of_iterations {0ULL};
   std::atomic<size_t> number_of_requests {1ULL};
@@ -112,7 +110,7 @@ void client(ClientOP * client_op, int port, int nb_messages) {
   ClientThread c_thread {};
 
   c_thread.connect_to_the_server(port, "localhost");
-  for (auto iterations = nb_messages; iterations > 0; --iterations) {
+  for (auto i = 0; i < nb_messages; ++i) {
     auto [size, buf] = client_op->get_operation();
     c_thread.sent_request(buf.get(), size);
   }
@@ -121,8 +119,9 @@ void client(ClientOP * client_op, int port, int nb_messages) {
 auto main(int args, char * argv[]) -> int {
   constexpr auto n_expected_args = 5;
   if (args < n_expected_args) {
-    std::cerr
-        << "usage: ./client <nb_threads> <hostname> <port> <nb_messages>\n";
+    fmt::print(
+        stderr,
+        "usage: ./client <nb_threads> <hostname> <port> <nb_messages>\n");
     return -1;
   }
 
@@ -142,5 +141,5 @@ auto main(int args, char * argv[]) -> int {
     thread.join();
   }
 
-  std::cout << "** all threads joined **\n";
+  fmt::print("** all threads joined **\n");
 }

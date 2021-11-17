@@ -2,6 +2,7 @@
 #include <cstring>
 #include <iostream>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <vector>
 
@@ -13,10 +14,12 @@
 
 #include "server_thread.h"
 
-constexpr int backlog =
-    1024;  // how many pending connections the queue will hold
+constexpr std::string_view usage = "usage: ./server <nb_server_threads> <port>";
 
-static void processing_func(std::shared_ptr<ServerThread> const & args) {
+// how many pending connections the queue will hold?
+constexpr int backlog = 1024;
+
+static void processing_func(ServerThread * args) {
   args->init();
   for (;;) {
     int ret = args->incomming_requests();
@@ -25,7 +28,7 @@ static void processing_func(std::shared_ptr<ServerThread> const & args) {
       // new req
       // pass func1 as callback that will do the
       // actual req processing
-      args->get_new_requests(func1);
+      args->get_new_requests([](auto /*size*/, auto /*buffer*/) {});
       continue;
     }
   }
@@ -34,27 +37,25 @@ static void processing_func(std::shared_ptr<ServerThread> const & args) {
 auto main(int args, char * argv[]) -> int {
   constexpr auto n_expected_args = 3;
   if (args < n_expected_args) {
-    std::cerr << "usage: ./server <nb_server_threads> <port>\n";
+    fmt::print(stderr, "{}\n", usage);
     return 1;
   }
 
   auto const nb_server_threads = std::stoull(argv[1]);
   if (nb_server_threads == 0) {
-    std::cerr << "usage: ./server <nb_server_threads> <port>\n";
+    fmt::print(stderr, "{}\n", usage);
     return 1;
   }
   auto port = std::stoull(argv[2]);
 
-  // That type looks wrong, a vector of shared_ptrs?????
-  std::vector<std::shared_ptr<ServerThread>> server_threads;
+  std::vector<ServerThread> server_threads;
   server_threads.reserve(nb_server_threads);
   std::vector<std::thread> threads;
   threads.reserve(nb_server_threads);
 
   for (size_t i = 0; i < nb_server_threads; i++) {
-    auto ptr = std::make_shared<ServerThread>(i);
-    server_threads.push_back(ptr);
-    threads.emplace_back(std::thread(processing_func, server_threads[i]));
+    server_threads.emplace_back(i);
+    threads.emplace_back(processing_func, &server_threads[i]);
   }
 
   /* listen on sock_fd, new connection on new_fd */
@@ -73,7 +74,7 @@ auto main(int args, char * argv[]) -> int {
   }
 
   if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &ret, sizeof(int)) == -1) {
-    fmt::print("setsockopt");
+    fmt::print("setsockopt\n");
     // NOLINTNEXTLINE(concurrency-mt-unsafe)
     exit(1);
   }
@@ -122,7 +123,7 @@ auto main(int args, char * argv[]) -> int {
       fmt::print(
           "socket : {}  matched to thread: {}\n", new_fd, server_thread_id);
       fcntl(new_fd, F_SETFL, O_NONBLOCK);
-      server_threads[server_thread_id]->update_connections(new_fd);
+      server_threads[server_thread_id].update_connections(new_fd);
       nb_clients++;
     }
   }

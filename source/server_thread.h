@@ -2,9 +2,11 @@
 
 #include <algorithm>
 #include <condition_variable>
+#include <functional>
 #include <mutex>
 #include <optional>
 #include <thread>
+#include <variant>
 
 #include <fmt/format.h>
 #include <unistd.h>
@@ -34,7 +36,7 @@ public:
   }
 
   inline auto operator=(ServerThread && other) noexcept -> ServerThread & {
-    std::cout << __PRETTY_FUNCTION__ << "\n";
+    fmt::print("{}\n", __PRETTY_FUNCTION__);
     std::lock_guard lock(mtx);
     std::lock_guard lock2(other.mtx);
     id = other.id;
@@ -83,27 +85,27 @@ public:
     auto it = std::find(
         listening_sockets.begin(), listening_sockets.end(), dead_connection);
     listening_sockets.erase(it);
-    std::cout << __PRETTY_FUNCTION__ << ": " << dead_connection << "\n";
+    fmt::print("{}: {}\n", __PRETTY_FUNCTION__, dead_connection);
   }
 
-  inline auto get_new_requests(void (*process_req)(size_t, char *)) -> int {
+  inline auto get_new_requests(
+      std::function<void(size_t, char *)> const & process_req) -> int {
     std::vector<int> lsockets;
     {
       std::lock_guard lock(mtx);
       lsockets = listening_sockets;  // this is weird, you create a copy but do
                                      // not delete old vector?
     }
-    // TODO how big do we expect to get this, why not use stack?
-    std::unique_ptr<char[]> buffer;
     for (auto csock : lsockets) {
-      int64_t bytecount = 0;
       if (FD_ISSET(csock, &rfds)) {  // NOLINT
-        if (bytecount = secure_recv(csock, buffer); bytecount <= 0) {
+        auto [bytecount, buffer] = secure_recv(csock);
+        if (bytecount <= 0) {
           if (bytecount == 0) {
             cleanup_connection(csock);
             init();
           }
         }
+        // FIXME: We expect the provider of the function to handle error cases!
         process_req(bytecount, buffer.get());
       }
     }
@@ -128,7 +130,7 @@ private:
     std::unique_lock<std::mutex> lock(mtx);
     auto nb_connections = listening_sockets.size();
     while (nb_connections == 0) {
-      std::cout << __PRETTY_FUNCTION__ << ": no connections \n";
+      fmt::print("{}: no connections\n", __PRETTY_FUNCTION__);
       cv.wait(lock);
       nb_connections = listening_sockets.size();
     }
@@ -161,52 +163,40 @@ private:
     return actual_msg_size;
   }
 
-  // FIXME change return type to tuple or even better some array wrapper...
-  // NOLINTNEXTLINE(google-runtime-references)
-  static auto secure_recv(int fd, std::unique_ptr<char[]> & buf) -> uint32_t {
-    int64_t bytes = 0;
-    int64_t remaining_bytes = 4;
-    char dlen[4];
-    auto * tmp = dlen;
+  static auto read_n(int fd, char * buffer, size_t n) -> size_t {
+    size_t bytes_read = 0;
+    while (bytes_read < n) {
+      auto bytes_left = n - bytes_read;
+      auto bytes_read_now = recv(fd, buffer + bytes_read, bytes_left, 0);
+      if (bytes_read_now <= 0) {
+        return bytes_read_now;
+      }
+      bytes_read += bytes_read_now;
+    }
+    return bytes_read;
+  }
 
-    while (remaining_bytes > 0) {
-      bytes = recv(fd, tmp, remaining_bytes, 0);
-      if (bytes < 0) {
-        // @dimitra: Note that the socket is non-blocking so it is fine to
-        // return -1 (EWOULDBLOCK/EAGAIN).
-        return -1;
-      }
-      if (bytes == 0) {
-        // @dimitra: Connection reset by peer
-        return 0;
-      }
-      remaining_bytes -= bytes;
-      tmp += bytes;
+  static auto secure_recv(int fd)
+      -> std::pair<uint32_t, std::unique_ptr<char[]>> {
+    char dlen[4];
+    if (auto byte_read = read_n(fd, dlen, length_size_field);
+        byte_read != length_size_field) {
+      return {byte_read, nullptr};
     }
 
-    auto actual_msg_size_opt = destruct_message(dlen, 4);
+    auto actual_msg_size_opt = destruct_message(dlen, length_size_field);
     if (!actual_msg_size_opt) {
-      return -1;
+      return {-1, nullptr};
     }
     auto actual_msg_size = *actual_msg_size_opt;
-    remaining_bytes = actual_msg_size;
-    buf = std::make_unique<char[]>(static_cast<size_t>(actual_msg_size) + 1);
+    auto buf =
+        std::make_unique<char[]>(static_cast<size_t>(actual_msg_size) + 1);
     buf[actual_msg_size] = '\0';
-    tmp = buf.get();
-
-    while (remaining_bytes > 0) {
-      bytes = recv(fd, tmp, remaining_bytes, 0);
-      if (bytes < 0) {
-        // @dimitra: Note that the socket is non-blocking so it is fine to
-        // return -1 (EWOULDBLOCK/EAGAIN).
-        return -1;
-      }
-      if (bytes == 0) {
-        return 0;
-      }
-      remaining_bytes -= bytes;
-      tmp += bytes;
+    if (auto byte_read = read_n(fd, buf.get(), actual_msg_size);
+        byte_read != actual_msg_size) {
+      return {byte_read, nullptr};
     }
-    return actual_msg_size;
+
+    return {actual_msg_size, std::move(buf)};
   }
 };

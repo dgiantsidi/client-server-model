@@ -51,8 +51,7 @@ public:
                 reinterpret_cast<sockaddr *>(&their_addr),
                 sizeof(struct sockaddr))
         == -1) {
-      // NOLINTNEXTLINE(concurrency-mt-unsafe)
-      fmt::print("connect");
+      fmt::print("connect\n");
       // NOLINTNEXTLINE(concurrency-mt-unsafe)
       exit(1);
     }
