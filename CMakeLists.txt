@@ -65,7 +65,7 @@ target_compile_features(svr PRIVATE cxx_std_20)
 
 target_link_libraries(svr
     PRIVATE
-    $<TARGET_OBJECTS:clt-svr-proto_lib>
+    clt-svr-proto_lib
     ${Protobuf_LIBRARIES}
     fmt::fmt
     Threads::Threads)
@@ -83,7 +83,7 @@ target_compile_features(clt PRIVATE cxx_std_20)
 
 target_link_libraries(clt
     PRIVATE
-    $<TARGET_OBJECTS:clt-svr-proto_lib>
+    clt-svr-proto_lib
     ${Protobuf_LIBRARIES}
     fmt::fmt
     Threads::Threads)
