@@ -42,25 +42,33 @@ class ClientOP {
   // FIXME I am pretty sure this is not necessary
   std::atomic<size_t> number_of_requests {1ULL};
 
-  void get_operation_add(sockets::client_msg::OperationData * operation_data) {
-    operation_data->set_argument(1);
+  void get_operation_put(sockets::client_msg::OperationData * operation_data) {
+    operation_data->set_key(1);
     global_number.fetch_add(1, std::memory_order_relaxed);
-    operation_data->set_type(sockets::client_msg::ADD);
+    operation_data->set_type(sockets::client_msg::PUT);
   }
 
-  void get_operation_sub(sockets::client_msg::OperationData * operation_data) {
-    operation_data->set_argument(1);
+  void get_operation_get(sockets::client_msg::OperationData * operation_data) {
+    operation_data->set_key(1);
     global_number.fetch_sub(1, std::memory_order_relaxed);
-    operation_data->set_type(sockets::client_msg::SUB);
+    operation_data->set_type(sockets::client_msg::GET);
   }
 
+  void get_operation_txn_start(
+      sockets::client_msg::OperationData * operation_data) {
+    operation_data->set_key(1);
+    global_number.fetch_sub(1, std::memory_order_relaxed);
+    operation_data->set_type(sockets::client_msg::TXN_START);
+  }
+
+#if 0
   // NOLINTNEXTLINE (readablitiy-convert-member-functions-to-static)
   void get_operation_random(
       sockets::client_msg::OperationData * operation_data) {
     operation_data->set_random_data(random_string);
     operation_data->set_type(sockets::client_msg::RANDOM_DATA);
   }
-
+#endif
   auto get_number_of_requests() -> size_t {
     auto res = number_of_requests.load(std::memory_order_relaxed);
     while (!number_of_requests.compare_exchange_weak(
@@ -81,11 +89,11 @@ public:
     auto operation_func = [i] {
       switch (i % 3) {
         case 0:
-          return &ClientOP::get_operation_add;
+          return &ClientOP::get_operation_put;
         case 1:
-          return &ClientOP::get_operation_sub;
+          return &ClientOP::get_operation_get;
         case 2:
-          return &ClientOP::get_operation_random;
+          return &ClientOP::get_operation_txn_start;
         default:
           throw std::runtime_error("Unknown operation");
       }

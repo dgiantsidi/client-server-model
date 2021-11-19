@@ -3,21 +3,24 @@ syntax = "proto2";
 package sockets;
 
 message client_msg {
-    enum OperationType {
-        ADD         = 0;
-        SUB         = 1;
-        TERMINATION = 2;
-        RANDOM_DATA = 3;
+  enum OperationType {
+    PUT         = 0;
+    GET         = 1;
+    TXN_START       = 2;
+    TXN_PUT = 3;
+    TXN_GET = 4;
+    TXN_COMMIT = 5;
+    TXN_ABORT = 6;
+  }
 
-    }
+  message OperationData {
+    required OperationType type = 1;
+    optional int32 op_id = 2;
+    optional int32 txn_id = 3;
+    optional int32 key = 4;
+    optional string value = 5;
+  }
 
-    message OperationData {
-        required OperationType type = 1;
-        optional int32 argument = 2;
-        optional string random_data = 3;
-
-    }
-
-    repeated OperationData ops = 3;
+  repeated OperationData ops = 6;
 
 }
