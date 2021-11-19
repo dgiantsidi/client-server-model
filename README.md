@@ -2,6 +2,14 @@
 
 This is the clt-svr-model project.
 
+```
+cmake --preset=dev .
+
+cmake --build build/dev -j <num_threads>
+
+cmake --build build/dev -t format-fix
+```
+
 # Building and installing
 
 See the [BUILDING](BUILDING.md) document.
