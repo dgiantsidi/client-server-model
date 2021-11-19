@@ -27,12 +27,13 @@ find_package(fmt REQUIRED)
 
 include_directories(SYSTEM ${Protobuf_INCLUDE_DIRS})
 include_directories(SYSTEM ${CMAKE_CURRENT_BINARY_DIR})
-protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS source/client_message.proto)
+protobuf_generate_cpp(PROTO_SRCS_CLIENT PROTO_HDRS_CLIENT source/client_message.proto)
+protobuf_generate_cpp(PROTO_SRCS_SERVER PROTO_HDRS_SERVER source/server_message.proto)
 
 add_library(
     clt-svr-proto_lib OBJECT
-    ${PROTO_SRCS}
-    ${PROTO_HDRS}
+    ${PROTO_SRCS_CLIENT}
+    ${PROTO_HDRS_CLIENT}
 )
 
 target_include_directories(
