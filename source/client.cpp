@@ -26,7 +26,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "client_message.pb.h"
+#include "message.h"
 #include "client_thread.h"
 #include "shared.h"
 
@@ -70,6 +70,8 @@ class ClientOP {
   }
 #endif
   auto get_number_of_requests() -> size_t {
+    // FIXME probably overly pessimistic
+    // FIXME we could simplify it by doing fetch_add and modulo
     auto res = number_of_requests.load(std::memory_order_relaxed);
     while (!number_of_requests.compare_exchange_weak(
         res,

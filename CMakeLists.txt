@@ -30,10 +30,23 @@ include_directories(SYSTEM ${CMAKE_CURRENT_BINARY_DIR})
 protobuf_generate_cpp(PROTO_SRCS_CLIENT PROTO_HDRS_CLIENT source/client_message.proto)
 protobuf_generate_cpp(PROTO_SRCS_SERVER PROTO_HDRS_SERVER source/server_message.proto)
 
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/message.h
+    DEPENDS ${PROTO_HDRS_CLIENT} ${PROTO_HDRS_SERVER} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/message_hdr.py
+    COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/scripts/message_hdr.py ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/message.h ${PROTO_HDRS_CLIENT} ${PROTO_HDRS_SERVER}
+)
+
+list(APPEND TEST_LIST ${PROTO_HDRS_CLIENT} ${PROTO_HDRS_SERVER})
+
+message(STATUS "${TEST_LIST}")
+
 add_library(
     clt-svr-proto_lib OBJECT
     ${PROTO_SRCS_CLIENT}
     ${PROTO_HDRS_CLIENT}
+    ${PROTO_SRCS_SERVER}
+    ${PROTO_HDRS_SERVER}
+    ${CMAKE_CURRENT_BINARY_DIR}/message.h
 )
 
 target_include_directories(
@@ -53,7 +66,7 @@ set_target_properties(
 
 # ---- Declare executables ----
 
-add_executable(svr source/server.cpp)
+add_executable(svr source/server.cpp ${CMAKE_CURRENT_BINARY_DIR}/message.h)
 add_executable(clt-svr::svr ALIAS svr)
 
 set_target_properties(
@@ -71,7 +84,7 @@ target_link_libraries(svr
     fmt::fmt
     Threads::Threads)
 
-add_executable(clt source/client.cpp)
+add_executable(clt source/client.cpp ${CMAKE_CURRENT_BINARY_DIR}/message.h)
 add_executable(clt-svr::clt ALIAS clt)
 
 set_target_properties(
