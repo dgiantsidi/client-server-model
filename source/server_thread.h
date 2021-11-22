@@ -6,16 +6,41 @@
 #include <mutex>
 #include <optional>
 #include <thread>
+#include <utility>
 #include <variant>
 
 #include <fmt/format.h>
 #include <unistd.h>
 
 #include "callback.h"
+#include "message.h"
 #include "shared.h"
+
+// https://stackoverflow.com/a/57757301
+namespace Details {
+template<typename T, std::size_t... Is>
+auto create_array(T value, std::index_sequence<Is...> /*unused*/)
+    -> std::array<T, sizeof...(Is)> {
+  // cast Is to void to remove the warning: unused value
+  return {{(static_cast<void>(Is), value)...}};
+}
+
+inline void unimplemented(sockets::client_msg::OperationData const & msg) {
+  auto const & op = msg.type();
+  auto const & error_str =
+      fmt::format("Unimplemented operation: {}",
+                  sockets::client_msg::OperationType_Name(op));
+  throw std::runtime_error(error_str);
+}
+}  // namespace Details
 
 class ServerThread {
 public:
+  constexpr static size_t n_ops = sockets::client_msg::OperationType_ARRAYSIZE;
+  using CallbackT =
+      std::function<void(sockets::client_msg::OperationData const &)>;
+  using CallbackArrayT = std::array<CallbackT, n_ops>;
+
   ServerThread() = delete;
   inline explicit ServerThread(int i)
       : id(i)
@@ -88,8 +113,23 @@ public:
     fmt::print("{}: {}\n", __PRETTY_FUNCTION__, dead_connection);
   }
 
-  inline auto get_new_requests(
-      std::function<void(size_t, char *)> const & process_req) -> int {
+  inline auto process_req(size_t sz, char * buf) const -> void {
+    sockets::client_msg msg;
+    auto payload_sz = sz - 4;
+    std::string tmp(buf + 4, payload_sz);
+    msg.ParseFromString(tmp);
+    for (auto i = 0; i < msg.ops_size(); ++i) {
+      auto const & op = msg.ops(i);
+      callbacks[op.op_id()](op);
+    }
+  }
+
+  inline void register_callback(sockets::client_msg::OperationType op,
+                                CallbackT cb) {
+    callbacks[op] = std::move(cb);
+  }
+
+  inline auto get_new_requests() -> int {
     std::vector<int> lsockets;
     {
       std::lock_guard lock(mtx);
@@ -122,6 +162,8 @@ private:
   int id;
   int max_fd;
   fd_set rfds;
+  CallbackArrayT callbacks = Details::create_array(
+      CallbackT {Details::unimplemented}, std::make_index_sequence<n_ops>());
   std::vector<int> listening_sockets;
   std::mutex mtx;
   std::condition_variable cv;

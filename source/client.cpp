@@ -26,8 +26,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "message.h"
 #include "client_thread.h"
+#include "message.h"
 #include "shared.h"
 
 class ClientOP {

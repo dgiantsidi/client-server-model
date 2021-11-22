@@ -28,7 +28,7 @@ static void processing_func(ServerThread * args) {
       // new req
       // pass func1 as callback that will do the
       // actual req processing
-      args->get_new_requests([](auto /*size*/, auto /*buffer*/) {});
+      args->get_new_requests();
       continue;
     }
   }

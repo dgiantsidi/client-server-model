@@ -14,6 +14,7 @@ stdenv.mkDerivation {
     protobuf
     ninja
     fmt
+    python3
   ];
 
   configurePhase = ''
