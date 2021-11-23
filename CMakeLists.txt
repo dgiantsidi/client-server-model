@@ -63,6 +63,13 @@ set_target_properties(
          CXX_CLANG_TIDY ""
 )
 
+add_library(
+    svr_lib OBJECT
+    source/server_thread.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/message.h
+)
+
+target_compile_features(svr_lib PUBLIC cxx_std_20)
 
 # ---- Declare executables ----
 
@@ -80,6 +87,7 @@ target_compile_features(svr PRIVATE cxx_std_20)
 target_link_libraries(svr
     PRIVATE
     clt-svr-proto_lib
+    svr_lib
     ${Protobuf_LIBRARIES}
     fmt::fmt
     Threads::Threads)
