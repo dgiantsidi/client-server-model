@@ -113,7 +113,7 @@ private:
   static auto read_n(int fd, char * buffer, size_t n) -> size_t;
 
   static auto secure_recv(int fd)
-      -> std::pair<uint32_t, std::unique_ptr<char[]>>;
+      -> std::pair<int32_t, std::unique_ptr<char[]>>;
 
   inline auto process_req(size_t sz, char * buf) const -> void;
 };

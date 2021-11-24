@@ -59,14 +59,17 @@ auto ServerThread::get_new_requests() -> int {
   for (auto csock : lsockets) {
     if (FD_ISSET(csock, &rfds)) {  // NOLINT
       auto [bytecount, buffer] = secure_recv(csock);
+      // int _bytecount = bytecount;
       if (bytecount <= 0) {
         if (bytecount == 0) {
           cleanup_connection(csock);
           init();
         }
       }
-      // FIXME: We expect the provider of the function to handle error cases!
-      process_req(bytecount, buffer.get());
+      else {
+      	// FIXME: We expect the provider of the function to handle error cases!
+      	process_req(bytecount, buffer.get());
+      }
     }
   }
   // FIXME What do we actually return here???
@@ -121,18 +124,25 @@ auto ServerThread::read_n(int fd, char * buffer, size_t n) -> size_t {
 }
 
 auto ServerThread::secure_recv(int fd)
-    -> std::pair<uint32_t, std::unique_ptr<char[]>> {
+    -> std::pair<int32_t, std::unique_ptr<char[]>> {
   char dlen[4];
-  if (auto byte_read = read_n(fd, dlen, length_size_field);
-      byte_read != length_size_field) {
-    return {byte_read, nullptr};
+  int len = 0;
+  while (auto byte_read = read_n(fd, dlen, length_size_field-len)) {
+	  if (byte_read == 0) {
+	  printf("here .....\n");
+    		return {-1, nullptr};
+	  }
+	  len += byte_read;
+	  if (len == length_size_field)
+		  break;
   }
 
   auto actual_msg_size_opt = destruct_message(dlen, length_size_field);
   if (!actual_msg_size_opt) {
+	  printf("here\n");
     return {-1, nullptr};
   }
-  auto actual_msg_size = *actual_msg_size_opt;
+  int actual_msg_size = *actual_msg_size_opt;
   auto buf = std::make_unique<char[]>(static_cast<size_t>(actual_msg_size) + 1);
   buf[actual_msg_size] = '\0';
   if (auto byte_read = read_n(fd, buf.get(), actual_msg_size);
@@ -150,6 +160,6 @@ auto ServerThread::process_req(size_t sz, char * buf) const -> void {
   msg.ParseFromString(tmp);
   for (auto i = 0; i < msg.ops_size(); ++i) {
     auto const & op = msg.ops(i);
-    callbacks[op.op_id()](op);
+    callbacks[op.type()](op);
   }
 }
