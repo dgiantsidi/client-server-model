@@ -13,20 +13,26 @@
 #include <sys/socket.h>
 
 #include "server_thread.h"
+#include "kv_store.h"
 
 constexpr std::string_view usage = "usage: ./server <nb_server_threads> <port>";
 
 // how many pending connections the queue will hold?
 constexpr int backlog = 1024;
 
+std::shared_ptr<KV_store> db;
+
 void process_query(const sockets::client_msg::OperationData & op) {
 	switch (op.type()) {
 		case sockets::client_msg::PUT:
 			{
+				db->put(op.key(), op.value());
 				break;
 			}
 		case sockets::client_msg::GET: 
 			{
+				std::string ret_val;
+				db->get(op.key(), ret_val);
 				break;
 			}
 		default:
@@ -95,6 +101,7 @@ static void processing_func(ServerThread * args) {
 }
 
 auto main(int args, char * argv[]) -> int {
+	db = KV_store::init();
 	constexpr auto n_expected_args = 3;
 	if (args < n_expected_args) {
 		fmt::print(stderr, "{}\n", usage);
