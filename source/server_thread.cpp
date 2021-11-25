@@ -65,10 +65,9 @@ auto ServerThread::get_new_requests() -> int {
           cleanup_connection(csock);
           init();
         }
-      }
-      else {
-      	// FIXME: We expect the provider of the function to handle error cases!
-      	process_req(bytecount, buffer.get());
+      } else {
+        // FIXME: We expect the provider of the function to handle error cases!
+        process_req(bytecount, buffer.get());
       }
     }
   }
@@ -124,30 +123,21 @@ auto ServerThread::read_n(int fd, char * buffer, size_t n) -> size_t {
 }
 
 auto ServerThread::secure_recv(int fd)
-    -> std::pair<int32_t, std::unique_ptr<char[]>> {
+    -> std::pair<size_t, std::unique_ptr<char[]>> {
   char dlen[4];
-  int len = 0;
-  while (auto byte_read = read_n(fd, dlen, length_size_field-len)) {
-	  if (byte_read == 0) {
-	  printf("here .....\n");
-    		return {-1, nullptr};
-	  }
-	  len += byte_read;
-	  if (len == length_size_field)
-		  break;
+  if (read_n(fd, dlen, length_size_field) != length_size_field) {
+    return {0, nullptr};
   }
 
   auto actual_msg_size_opt = destruct_message(dlen, length_size_field);
   if (!actual_msg_size_opt) {
-	  printf("here\n");
-    return {-1, nullptr};
+    return {0, nullptr};
   }
-  int actual_msg_size = *actual_msg_size_opt;
+  auto actual_msg_size = *actual_msg_size_opt;
   auto buf = std::make_unique<char[]>(static_cast<size_t>(actual_msg_size) + 1);
   buf[actual_msg_size] = '\0';
-  if (auto byte_read = read_n(fd, buf.get(), actual_msg_size);
-      byte_read != actual_msg_size) {
-    return {byte_read, nullptr};
+  if (read_n(fd, buf.get(), actual_msg_size) != actual_msg_size) {
+    return {0, nullptr};
   }
 
   return {actual_msg_size, std::move(buf)};

@@ -112,8 +112,11 @@ private:
 
   static auto read_n(int fd, char * buffer, size_t n) -> size_t;
 
-  static auto secure_recv(int fd)
-      -> std::pair<int32_t, std::unique_ptr<char[]>>;
+  static auto secure_recv(int fd) -> std::pair<size_t, std::unique_ptr<char[]>>;
 
+  // TODO: We might want process_req to actually own the memory...
+  //       ... but we need to make sure that the message format than own the
+  //       memory so I assume we need to make a class which inherits from
+  //       OperationType...
   inline auto process_req(size_t sz, char * buf) const -> void;
 };

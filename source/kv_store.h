@@ -1,34 +1,27 @@
-#include <unordered_map>
 #include <memory>
+#include <optional>
+#include <string_view>
+#include <unordered_map>
 
+class KvStore {
+public:
+  static inline auto init() -> std::shared_ptr<KvStore> {
+    return std::make_shared<KvStore>();
+  }
 
+  inline auto put(int key, std::string_view value) -> bool {
+    kv_store.insert_or_assign(key, value);
+    return true;
+  }
 
+  inline auto get(int key) const -> std::optional<std::string_view> {
+    auto it = kv_store.find(key);
+    if (it == kv_store.end()) {
+      return std::nullopt;
+    }
+    return it->second;
+  }
 
-class KV_store{
-	public:
-		static std::shared_ptr<KV_store> init() {
-			return std::make_shared<KV_store>();
-		}
-
-		bool put(int key, std::string value) {
-			if (kv_store.find(key) != kv_store.end())
-				kv_store[key] = value;
-			else
-				kv_store.insert({key, value});
-			return true;
-		}
-		
-		bool get(int key, std::string& value) {
-			if (kv_store.find(key) != kv_store.end()) {
-				value = kv_store[key];
-				return true;
-			}
-			else{
-				value = "\0";
-				return false;
-			}
-		}
-
-	private:
-		std::unordered_map<int, std::string> kv_store;
+private:
+  std::unordered_map<int, std::string> kv_store;
 };
