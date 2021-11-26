@@ -1,13 +1,14 @@
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <utility>
+
 #include "shared.h"
 
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <optional>
-#include <utility>
-#include <memory>
-#include <cstdint>
 
 inline auto destruct_message(char * msg, size_t bytes)
     -> std::optional<uint32_t> {
@@ -58,8 +59,7 @@ auto secure_recv(int fd) -> std::pair<size_t, std::unique_ptr<char[]>> {
   return {actual_msg_size, std::move(buf)};
 }
 
-auto secure_send(int fd, char * data, size_t len)
-    -> std::optional<size_t> {
+auto secure_send(int fd, char * data, size_t len) -> std::optional<size_t> {
   auto bytes = 0LL;
   auto remaining_bytes = len;
 

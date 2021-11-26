@@ -3,9 +3,9 @@
 #include <cstdint>
 #include <cstring>
 #include <memory>
-#include <netdb.h>
 #include <optional>
 
+#include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -65,8 +65,7 @@ inline auto convert_int_to_byte_array(char * dst, uint32_t sz) noexcept
 
 auto secure_recv(int fd) -> std::pair<size_t, std::unique_ptr<char[]>>;
 
-//NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 extern hostent * hostip;
 
-auto secure_send(int fd, char * data, size_t len)
-    -> std::optional<size_t>;
+auto secure_send(int fd, char * data, size_t len) -> std::optional<size_t>;

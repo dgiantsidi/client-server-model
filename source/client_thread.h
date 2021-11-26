@@ -102,9 +102,7 @@ public:
     auto msg_size = msg_str.size();
     auto buf = std::make_unique<char[]>(msg_size + length_size_field);
     convert_int_to_byte_array(buf.get(), msg_size);
-    memcpy(buf.get() + length_size_field,
-           msg_str.c_str(),
-           msg_size);
+    memcpy(buf.get() + length_size_field, msg_str.c_str(), msg_size);
 
     secure_send(sockfd, buf.get(), msg_size + length_size_field);
   }

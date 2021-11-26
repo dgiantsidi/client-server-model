@@ -30,7 +30,7 @@
 #include "message.h"
 #include "shared.h"
 
-//NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 std::atomic<int> threads_ids {0};
 
 class ClientOP {
