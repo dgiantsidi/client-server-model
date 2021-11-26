@@ -20,21 +20,57 @@ constexpr std::string_view usage = "usage: ./server <nb_server_threads> <port>";
 // how many pending connections the queue will hold?
 constexpr int backlog = 1024;
 
-void process_put(KvStore & db, sockets::client_msg::OperationData const & op) {
-  db.put(op.key(), op.value());
+std::unique_ptr<char[]> construct_reply(int op_id,
+                                        int success,
+                                        int txn_id,
+                                        std::string && val) {
+  server::server_response::reply rep;
+  rep.set_op_id(op_id);
+  rep.set_success(success);
+  rep.set_txn_id(txn_id);
+  rep.set_value(val);
+
+  std::string msg_str;
+  rep.SerializeToString(&msg_str);
+
+  auto msg_size = msg_str.size();
+  auto buf = std::make_unique<char[]>(msg_size + length_size_field);
+  convert_int_to_byte_array(buf.get(), msg_size);
+  memcpy(buf.get() + length_size_field, msg_str.data(), msg_size);
+  return buf;  // copy-elision
+}
+
+void process_put(KvStore & db,
+                 ServerThread * args,
+                 sockets::client_msg::OperationData const & op,
+                 int fd) {
+  auto success = db.put(op.key(), op.value());
+
+  auto rep_ptr = construct_reply(
+      op.op_id(), success, -1 /* not a txn */, "" /* empty val */);
+  args->enqueue_reply(fd, std::move(rep_ptr));
 }
 
 void process_get(KvStore const & db,
-                 sockets::client_msg::OperationData const & op) {
+                 ServerThread * args,
+                 sockets::client_msg::OperationData const & op,
+                 int fd) {
   auto ret_val = db.get(op.key());
   if (!ret_val) {
     fmt::print("Key: {} not found\n", op.key());
   }
+
+  auto rep_ptr = construct_reply(op.op_id(),
+                                 ((ret_val) ? 1 : 0),
+                                 -1 /* not a txn */,
+                                 std::string(*ret_val));
+
+  args->enqueue_reply(fd, std::move(rep_ptr));
   auto val = *ret_val;
   (void)val;
 }
 
-void process_txn(const sockets::client_msg::OperationData & op) {
+void process_txn(const sockets::client_msg::OperationData & op, int fd) {
   switch (op.type()) {
     case sockets::client_msg::TXN_START: {
       break;
@@ -62,10 +98,12 @@ void process_txn(const sockets::client_msg::OperationData & op) {
 static void processing_func(KvStore & db, ServerThread * args) {
   args->init();
   args->register_callback(sockets::client_msg::TXN_START, process_txn);
-  args->register_callback(sockets::client_msg::PUT,
-                          [&db](auto const & op) { process_put(db, op); });
-  args->register_callback(sockets::client_msg::GET,
-                          [&db](auto const & op) { process_get(db, op); });
+  args->register_callback(
+      sockets::client_msg::PUT,
+      [&db, args](auto const & op, int fd) { process_put(db, args, op, fd); });
+  args->register_callback(
+      sockets::client_msg::GET,
+      [&db, args](auto const & op, int fd) { process_get(db, args, op, fd); });
   args->register_callback(sockets::client_msg::TXN_PUT, process_txn);
   args->register_callback(sockets::client_msg::TXN_GET, process_txn);
   args->register_callback(sockets::client_msg::TXN_COMMIT, process_txn);
@@ -78,6 +116,7 @@ static void processing_func(KvStore & db, ServerThread * args) {
       // pass func1 as callback that will do the
       // actual req processing
       args->get_new_requests();
+      args->post_replies();
       continue;
     }
   }

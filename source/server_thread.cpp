@@ -4,6 +4,11 @@
 
 #include "server_thread.h"
 
+#include <netdb.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+
 auto ServerThread::operator=(ServerThread && other) noexcept -> ServerThread & {
   fmt::print("{}\n", __PRETTY_FUNCTION__);
   std::lock_guard lock(mtx);
@@ -17,10 +22,75 @@ auto ServerThread::operator=(ServerThread && other) noexcept -> ServerThread & {
   return *this;
 }
 
+void ServerThread::create_communication_pair(int listening_socket) {
+  auto * he = gethostbyname("localhost");
+  if (he == nullptr) {
+    // NOLINTNEXTLINE(concurrency-mt-unsafe)
+    exit(1);
+  }
+
+  // **** block of code finds the localhost IP ****
+  constexpr auto max_hostname_length = 512ULL;
+  char hostn[max_hostname_length];  // placeholder for the hostname
+
+  //    hostent * hostIP;  // placeholder for the IP address
+
+  // if the gethostname returns a name then the program will get the ip
+  // address using gethostbyname
+  if ((gethostname(hostn, sizeof(hostn))) == 0) {
+    //     hostIP = gethostbyname(hostn);  // the netdb.h function
+    //     gethostbyname
+  } else {
+    fmt::print(
+        "ERROR:FC4539 - IP Address not found.\n");  // error if the hostname
+                                                    // is not found
+  }
+  //****************************************************************
+  fmt::print("waiting here ..\n");
+  auto [bytecount, buffer] = secure_recv(listening_socket);
+  if (bytecount == 0) {
+    fmt::print("Error on {}\n", __func__);
+    exit(1);
+  }
+  sockets::client_msg msg;
+  auto payload_sz = bytecount - 4;
+  std::string tmp(buffer.get() + 4, payload_sz);
+  msg.ParseFromString(tmp);
+
+  fmt::print("done here .. {}\n", msg.ops(0).port());
+
+  int sockfd = -1;
+  int port = msg.ops(0).port();
+  if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+    fmt::print("socket\n");
+    // NOLINTNEXTLINE(concurrency-mt-unsafe)
+    exit(1);
+  }
+
+  // connector.s address information
+  sockaddr_in their_addr {};
+  their_addr.sin_family = AF_INET;
+  their_addr.sin_port = htons(port);
+  their_addr.sin_addr = *(reinterpret_cast<in_addr *>(he->h_addr));
+  memset(&(their_addr.sin_zero), 0, sizeof(their_addr.sin_zero));
+
+  if (connect(sockfd,
+              reinterpret_cast<sockaddr *>(&their_addr),
+              sizeof(struct sockaddr))
+      == -1) {
+    fmt::print("connect %d\n", errno);
+    // NOLINTNEXTLINE(concurrency-mt-unsafe)
+    exit(1);
+  }
+  fmt::print("{} {}\n", listening_socket, sockfd);
+  communication_pairs.insert({listening_socket, sockfd});
+}
+
 void ServerThread::update_connections(int new_sock_fd) {
   {
     std::lock_guard lock(mtx);
     listening_sockets.push_back(new_sock_fd);
+    create_communication_pair(new_sock_fd);
   }
   cv.notify_one();
 }
@@ -46,7 +116,13 @@ void ServerThread::cleanup_connection(int dead_connection) {
   auto it = std::find(
       listening_sockets.begin(), listening_sockets.end(), dead_connection);
   listening_sockets.erase(it);
-  fmt::print("{}: {}\n", __PRETTY_FUNCTION__, dead_connection);
+  fmt::print("{}: {} (socket:{}={} reqs)\n",
+             __PRETTY_FUNCTION__,
+             dead_connection,
+             dead_connection,
+             reqs_per_socket[dead_connection]);
+
+  reqs_per_socket.erase(dead_connection);
 }
 
 auto ServerThread::get_new_requests() -> int {
@@ -59,15 +135,19 @@ auto ServerThread::get_new_requests() -> int {
   for (auto csock : lsockets) {
     if (FD_ISSET(csock, &rfds)) {  // NOLINT
       auto [bytecount, buffer] = secure_recv(csock);
-      // int _bytecount = bytecount;
-      if (bytecount <= 0) {
-        if (bytecount == 0) {
+      if (static_cast<int>(bytecount) <= 0) {
+        if (static_cast<int>(bytecount) == 0) {
           cleanup_connection(csock);
           init();
         }
       } else {
         // FIXME: We expect the provider of the function to handle error cases!
-        process_req(bytecount, buffer.get());
+        if (reqs_per_socket.find(csock) == reqs_per_socket.end()) {
+          reqs_per_socket.insert({csock, 0});
+        } else {
+          reqs_per_socket[csock] += 1;
+        }
+        process_req(csock, bytecount, buffer.get());
       }
     }
   }
@@ -109,15 +189,31 @@ auto ServerThread::destruct_message(char * msg, size_t bytes)
   return actual_msg_size;
 }
 
+void ServerThread::post_replies() {
+  for (auto & buf : queue_with_replies) {
+    // TODO: secure_sent()
+    auto it =
+        std::find(queue_with_replies.begin(), queue_with_replies.end(), buf);
+    auto ptr = std::move(std::get<1>(*it));
+    auto msg_size = convert_byte_array_to_int(ptr.get());  // TODO
+    auto repfd = communication_pairs[std::get<0>(*it)];
+    secure_send(repfd, ptr.get(), msg_size + length_size_field);
+  }
+  queue_with_replies.clear();
+}
+
 auto ServerThread::read_n(int fd, char * buffer, size_t n) -> size_t {
   size_t bytes_read = 0;
   while (bytes_read < n) {
     auto bytes_left = n - bytes_read;
     auto bytes_read_now = recv(fd, buffer + bytes_read, bytes_left, 0);
-    if (bytes_read_now <= 0) {
+    // negative return_val means that there are no more data (fine for non
+    // blocking socket)
+    if (bytes_read_now == 0) {
       return bytes_read_now;
+    } else if (bytes_read_now > 0) {
+      bytes_read += bytes_read_now;
     }
-    bytes_read += bytes_read_now;
   }
   return bytes_read;
 }
@@ -143,13 +239,17 @@ auto ServerThread::secure_recv(int fd)
   return {actual_msg_size, std::move(buf)};
 }
 
-auto ServerThread::process_req(size_t sz, char * buf) const -> void {
+auto ServerThread::process_req(int fd, size_t sz, char * buf) const -> void {
   sockets::client_msg msg;
   auto payload_sz = sz - 4;
   std::string tmp(buf + 4, payload_sz);
   msg.ParseFromString(tmp);
   for (auto i = 0; i < msg.ops_size(); ++i) {
     auto const & op = msg.ops(i);
-    callbacks[op.type()](op);
+    callbacks[op.type()](op, fd);
   }
+}
+
+void ServerThread::enqueue_reply(int fd, std::unique_ptr<char[]> rep) {
+  queue_with_replies.push_back({fd, std::move(rep)});
 }

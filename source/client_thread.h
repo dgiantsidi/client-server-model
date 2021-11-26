@@ -4,6 +4,7 @@
 
 #include <fmt/format.h>
 
+#include "message.h"
 #include "shared.h"
 
 class ClientThread {
@@ -16,7 +17,7 @@ public:
       exit(1);
     }
 
-    //***************************block of code finds the localhost IP
+    // **** block of code finds the localhost IP ****
     constexpr auto max_hostname_length = 512ULL;
     char hostn[max_hostname_length];  // placeholder for the hostname
 
@@ -55,6 +56,77 @@ public:
       // NOLINTNEXTLINE(concurrency-mt-unsafe)
       exit(1);
     }
+
+    // init the listening socket
+    int ret = 1;
+    port = 30500 + thread_id;
+    sent_init_connection_request(port);
+
+    int repfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (repfd == -1) {
+      fmt::print("socket\n");
+      // NOLINTNEXTLINE(concurrency-mt-unsafe)
+      exit(1);
+    }
+
+    if (setsockopt(repfd, SOL_SOCKET, SO_REUSEADDR, &ret, sizeof(int)) == -1) {
+      fmt::print("setsockopt\n");
+      // NOLINTNEXTLINE(concurrency-mt-unsafe)
+      exit(1);
+    }
+
+    sockaddr_in my_addr {};
+    my_addr.sin_family = AF_INET;  // host byte order
+    my_addr.sin_port = htons(port);  // short, network byte order
+    my_addr.sin_addr.s_addr = INADDR_ANY;  // automatically fill with my IP
+    memset(&(my_addr.sin_zero),
+           0,
+           sizeof(my_addr.sin_zero));  // zero the rest of the struct
+
+    if (bind(repfd, reinterpret_cast<sockaddr *>(&my_addr), sizeof(sockaddr))
+        == -1) {
+      fmt::print("bind\n");
+      // NOLINTNEXTLINE(concurrency-mt-unsafe)
+      exit(1);
+    }
+
+    if (listen(repfd, 1024) == -1) {
+      fmt::print("listen\n");
+      // NOLINTNEXTLINE(concurrency-mt-unsafe)
+      exit(1);
+    }
+
+    socklen_t sin_size = sizeof(sockaddr_in);
+    fmt::print("waiting for new connections ..\n");
+    sockaddr_in _their_addr {};
+    auto new_fd = accept4(repfd,
+                          reinterpret_cast<sockaddr *>(&_their_addr),
+                          &sin_size,
+                          SOCK_CLOEXEC);
+    if (new_fd == -1) {
+      // NOLINTNEXTLINE(concurrency-mt-unsafe)
+      fmt::print("accecpt() failed ..{}\n", std::strerror(errno));
+    }
+
+    fcntl(new_fd, F_SETFL, O_NONBLOCK);
+    fmt::print("accept succeeded on socket {} {} ..\n", new_fd, repfd);
+    rep_fd = new_fd;
+  }
+
+  void sent_init_connection_request(int port) {
+    sockets::client_msg msg;
+    auto * operation_data = msg.add_ops();
+    operation_data->set_type(sockets::client_msg::INIT);
+    operation_data->set_port(port);
+    std::string msg_str;
+    msg.SerializeToString(&msg_str);
+
+    auto msg_size = msg_str.size();
+    auto buf = std::make_unique<char[]>(msg_size + length_size_field);
+    convert_int_to_byte_array(buf.get(), msg_size);
+    memcpy(buf.get() + length_size_field, msg_str.data(), msg_size);
+
+    secure_send(sockfd, buf.get(), msg_size + length_size_field);
   }
 
   void sent_request(char * request, size_t size) const {
@@ -66,7 +138,18 @@ public:
     }
   }
 
-  ClientThread() = default;
+  void recv_ack() {
+    auto [bytecount, buffer] = secure_recv(rep_fd);
+    if (buffer == nullptr) {
+      printf("ERROR\n");
+      exit(2);
+    }
+    replies++;
+  }
+
+  ClientThread() = delete;
+  explicit ClientThread(int tid)
+      : thread_id(tid) {}
   ClientThread(int port, char const * hostname) {
     connect_to_the_server(port, hostname);
   }
@@ -91,8 +174,12 @@ public:
     }
   }
 
+  int32_t replies = 0;
+
 private:
-  int sockfd = -1;
+  int sockfd = -4, rep_fd = -1;
+  int thread_id = 0;
+
   /**
    *  * It constructs the message to be sent.
    *   * It takes as arguments a destination char ptr, the payload (data to be

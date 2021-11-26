@@ -29,6 +29,7 @@
 #include "client_thread.h"
 #include "message.h"
 #include "shared.h"
+std::atomic<int> threads_ids {0};
 
 class ClientOP {
   static constexpr auto max_n_operations = 100ULL;
@@ -58,18 +59,11 @@ class ClientOP {
       sockets::client_msg::OperationData * operation_data) {
     operation_data->set_key(1);
     global_number.fetch_sub(1, std::memory_order_relaxed);
-    operation_data->set_type(sockets::client_msg::TXN_START);
+    operation_data->set_type(sockets::client_msg::PUT);
   }
 
-#if 0
-  // NOLINTNEXTLINE (readablitiy-convert-member-functions-to-static)
-  void get_operation_random(
-      sockets::client_msg::OperationData * operation_data) {
-    operation_data->set_random_data(random_string);
-    operation_data->set_type(sockets::client_msg::RANDOM_DATA);
-  }
-#endif
   auto get_number_of_requests() -> size_t {
+    return 1;
     // FIXME probably overly pessimistic
     // FIXME we could simplify it by doing fetch_add and modulo
     auto res = number_of_requests.load(std::memory_order_relaxed);
@@ -120,12 +114,22 @@ public:
 };
 
 void client(ClientOP * client_op, int port, int nb_messages) {
-  ClientThread c_thread {};
+  auto id = threads_ids.fetch_add(1);
+  ClientThread c_thread(id);
 
   c_thread.connect_to_the_server(port, "localhost");
+
+  sleep(2);
+
+  printf("lalalalala \n");
   for (auto i = 0; i < nb_messages; ++i) {
     auto [size, buf] = client_op->get_operation();
     c_thread.sent_request(buf.get(), size);
+    c_thread.recv_ack();
+  }
+
+  while (c_thread.replies != nb_messages) {
+    c_thread.recv_ack();
   }
 }
 
@@ -147,6 +151,7 @@ auto main(int args, char * argv[]) -> int {
   ClientOP client_op;
 
   for (size_t i = 0; i < nb_clients; i++) {
+    auto id = std::make_unique<int>(i);
     threads.emplace_back(client, &client_op, port, nb_messages);
   }
 

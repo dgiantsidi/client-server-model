@@ -27,7 +27,8 @@ auto create_array(T value, std::index_sequence<Is...> /*unused*/)
   return {{(static_cast<void>(Is), value)...}};
 }
 
-inline void unimplemented(sockets::client_msg::OperationData const & msg) {
+inline void unimplemented(sockets::client_msg::OperationData const & msg,
+                          int fd) {
   auto const & op = msg.type();
   auto const & error_str =
       fmt::format("Unimplemented operation: {}",
@@ -40,7 +41,7 @@ class ServerThread {
 public:
   constexpr static size_t n_ops = sockets::client_msg::OperationType_ARRAYSIZE;
   using CallbackT =
-      std::function<void(sockets::client_msg::OperationData const &)>;
+      std::function<void(sockets::client_msg::OperationData const &, int fd)>;
   using CallbackArrayT = std::array<CallbackT, n_ops>;
 
   ServerThread() = delete;
@@ -77,6 +78,7 @@ public:
   auto incomming_requests() -> int;
 
   void cleanup_connection(int dead_connection);
+  void create_communication_pair(int socket);
 
   inline void register_callback(sockets::client_msg::OperationType op,
                                 CallbackT cb) {
@@ -84,6 +86,8 @@ public:
   }
 
   auto get_new_requests() -> int;
+  void enqueue_reply(int fd, std::unique_ptr<char[]> rep);
+  void post_replies();
 
   void init();
 
@@ -94,8 +98,13 @@ private:
   CallbackArrayT callbacks = Details::create_array(
       CallbackT {Details::unimplemented}, std::make_index_sequence<n_ops>());
   std::vector<int> listening_sockets;
+  std::unordered_map<int, int> communication_pairs;
+  // debbuging
+  std::unordered_map<int, int> reqs_per_socket;
   std::mutex mtx;
   std::condition_variable cv;
+
+  std::vector<std::tuple<int, std::unique_ptr<char[]>>> queue_with_replies;
 
   void get_new_connections();
 
@@ -114,9 +123,48 @@ private:
 
   static auto secure_recv(int fd) -> std::pair<size_t, std::unique_ptr<char[]>>;
 
+  static auto secure_send(int fd, char * data, size_t len)
+      -> std::optional<size_t> {
+    auto bytes = 0LL;
+    auto remaining_bytes = len;
+
+    char * tmp = data;
+
+    while (remaining_bytes > 0) {
+      bytes = send(fd, tmp, remaining_bytes, 0);
+      if (bytes < 0) {
+        // @dimitra: the socket is in non-blocking mode; select() should be also
+        // applied
+        //             return -1;
+        //
+        return std::nullopt;
+      }
+      remaining_bytes -= bytes;
+      tmp += bytes;
+    }
+
+    return len;
+  }
+
+  static void construct_message(char * dst,
+                                char * payload,
+                                size_t payload_size) {
+    convert_int_to_byte_array(dst, payload_size);
+    ::memcpy(dst + 4, payload, payload_size);
+  }
+
+  static void sent_request(int sockfd, char * request, size_t size) {
+    if (auto numbytes = secure_send(sockfd, request, size); !numbytes) {
+      // NOLINTNEXTLINE(concurrency-mt-unsafe)
+      fmt::print("{}\n", std::strerror(errno));
+      // NOLINTNEXTLINE(concurrency-mt-unsafe)
+      exit(1);
+    }
+  }
+
   // TODO: We might want process_req to actually own the memory...
   //       ... but we need to make sure that the message format than own the
   //       memory so I assume we need to make a class which inherits from
   //       OperationType...
-  inline auto process_req(size_t sz, char * buf) const -> void;
+  inline auto process_req(int fd, size_t sz, char * buf) const -> void;
 };
