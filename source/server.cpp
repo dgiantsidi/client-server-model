@@ -20,10 +20,8 @@ constexpr std::string_view usage = "usage: ./server <nb_server_threads> <port>";
 // how many pending connections the queue will hold?
 constexpr int backlog = 1024;
 
-std::unique_ptr<char[]> construct_reply(int op_id,
-                                        int success,
-                                        int txn_id,
-                                        std::string && val) {
+auto construct_reply(int op_id, int success, int txn_id, std::string && val)
+    -> std::unique_ptr<char[]> {
   server::server_response::reply rep;
   rep.set_op_id(op_id);
   rep.set_success(success);

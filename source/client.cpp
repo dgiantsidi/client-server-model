@@ -76,7 +76,7 @@ class ClientOP {
   }
 
 public:
-  auto get_operation() -> std::pair<size_t, std::unique_ptr<char[]>> {
+  auto get_operation() -> std::tuple<size_t, std::unique_ptr<char[]>, int> {
     auto i = number_of_iterations.fetch_add(1ULL, std::memory_order_relaxed);
     auto j = get_number_of_requests();
 
@@ -109,7 +109,7 @@ public:
     auto buf = std::make_unique<char[]>(msg_size + length_size_field);
     convert_int_to_byte_array(buf.get(), msg_size);
     memcpy(buf.get() + length_size_field, msg_str.data(), msg_size);
-    return {msg_size + length_size_field, std::move(buf)};
+    return {msg_size + length_size_field, std::move(buf), j};
   }
 };
 
@@ -121,14 +121,15 @@ void client(ClientOP * client_op, int port, int nb_messages) {
 
   sleep(2);
 
-  printf("lalalalala \n");
+  auto expected_replies = 0;
   for (auto i = 0; i < nb_messages; ++i) {
-    auto [size, buf] = client_op->get_operation();
+    auto [size, buf, num] = client_op->get_operation();
+    expected_replies += num;
     c_thread.sent_request(buf.get(), size);
     c_thread.recv_ack();
   }
 
-  while (c_thread.replies != nb_messages) {
+  while (c_thread.replies != expected_replies) {
     c_thread.recv_ack();
   }
 }

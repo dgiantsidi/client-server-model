@@ -31,8 +31,9 @@ inline void unimplemented(sockets::client_msg::OperationData const & msg,
                           int fd) {
   auto const & op = msg.type();
   auto const & error_str =
-      fmt::format("Unimplemented operation: {}",
-                  sockets::client_msg::OperationType_Name(op));
+      fmt::format("Unimplemented operation: {} {}",
+                  sockets::client_msg::OperationType_Name(op),
+                  fd);
   throw std::runtime_error(error_str);
 }
 }  // namespace Details
@@ -78,7 +79,7 @@ public:
   auto incomming_requests() -> int;
 
   void cleanup_connection(int dead_connection);
-  void create_communication_pair(int socket);
+  void create_communication_pair(int listening_socket);
 
   inline void register_callback(sockets::client_msg::OperationType op,
                                 CallbackT cb) {
