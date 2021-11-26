@@ -64,6 +64,14 @@ set_target_properties(
 )
 
 add_library(
+    shared_lib OBJECT
+    source/shared.cpp
+    source/hostip.cpp
+)
+
+target_compile_features(shared_lib PUBLIC cxx_std_20)
+
+add_library(
     svr_lib OBJECT
     source/server_thread.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/message.h
@@ -73,7 +81,7 @@ target_compile_features(svr_lib PUBLIC cxx_std_20)
 
 # ---- Declare executables ----
 
-add_executable(svr source/server.cpp source/hostip.cpp ${CMAKE_CURRENT_BINARY_DIR}/message.h)
+add_executable(svr source/server.cpp ${CMAKE_CURRENT_BINARY_DIR}/message.h)
 add_executable(clt-svr::svr ALIAS svr)
 
 set_target_properties(
@@ -88,11 +96,12 @@ target_link_libraries(svr
     PRIVATE
     clt-svr-proto_lib
     svr_lib
+    shared_lib
     ${Protobuf_LIBRARIES}
     fmt::fmt
     Threads::Threads)
 
-add_executable(clt source/client.cpp source/hostip.cpp ${CMAKE_CURRENT_BINARY_DIR}/message.h)
+add_executable(clt source/client.cpp ${CMAKE_CURRENT_BINARY_DIR}/message.h)
 add_executable(clt-svr::clt ALIAS clt)
 
 set_target_properties(
@@ -106,6 +115,7 @@ target_compile_features(clt PRIVATE cxx_std_20)
 target_link_libraries(clt
     PRIVATE
     clt-svr-proto_lib
+    shared_lib
     ${Protobuf_LIBRARIES}
     fmt::fmt
     Threads::Threads)

@@ -20,7 +20,7 @@ constexpr std::string_view usage = "usage: ./server <nb_server_threads> <port>";
 // how many pending connections the queue will hold?
 constexpr int backlog = 1024;
 
-auto construct_reply(int op_id, int success, int txn_id, std::string && val)
+auto construct_reply(int op_id, int success, int txn_id, std::string const & val)
     -> std::unique_ptr<char[]> {
   server::server_response::reply rep;
   rep.set_op_id(op_id);
@@ -122,7 +122,6 @@ static void processing_func(KvStore & db, ServerThread * args) {
 
 auto main(int args, char * argv[]) -> int {
   KvStore db;
-  hostip = gethostbyname("localhost");
   constexpr auto n_expected_args = 3;
   if (args < n_expected_args) {
     fmt::print(stderr, "{}\n", usage);

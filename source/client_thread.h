@@ -9,7 +9,7 @@
 
 class ClientThread {
 public:
-  void connect_to_the_server(int port, char const * hostname) {
+  void connect_to_the_server(int port, char const * /*hostname*/) {
     // NOLINTNEXTLINE(concurrency-mt-unsafe)
     hostent * he = hostip;
 
@@ -67,8 +67,8 @@ public:
       // NOLINTNEXTLINE(concurrency-mt-unsafe)
       exit(1);
     }
-
-    if (listen(repfd, 1024) == -1) {
+    constexpr int max_backlog = 1024;
+    if (listen(repfd, max_backlog) == -1) {
       fmt::print("listen\n");
       // NOLINTNEXTLINE(concurrency-mt-unsafe)
       exit(1);
@@ -91,7 +91,7 @@ public:
     rep_fd = new_fd;
   }
 
-  void sent_init_connection_request(int port) {
+  void sent_init_connection_request(int port) const {
     sockets::client_msg msg;
     auto * operation_data = msg.add_ops();
     operation_data->set_type(sockets::client_msg::INIT);
