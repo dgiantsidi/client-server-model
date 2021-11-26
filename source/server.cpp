@@ -122,6 +122,7 @@ static void processing_func(KvStore & db, ServerThread * args) {
 
 auto main(int args, char * argv[]) -> int {
   KvStore db;
+  hostip = gethostbyname("localhost");
   constexpr auto n_expected_args = 3;
   if (args < n_expected_args) {
     fmt::print(stderr, "{}\n", usage);

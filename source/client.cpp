@@ -135,6 +135,7 @@ void client(ClientOP * client_op, int port, int nb_messages) {
 }
 
 auto main(int args, char * argv[]) -> int {
+	hostip = gethostbyname("localhost");
   constexpr auto n_expected_args = 5;
   if (args < n_expected_args) {
     fmt::print(

@@ -73,7 +73,7 @@ target_compile_features(svr_lib PUBLIC cxx_std_20)
 
 # ---- Declare executables ----
 
-add_executable(svr source/server.cpp ${CMAKE_CURRENT_BINARY_DIR}/message.h)
+add_executable(svr source/server.cpp source/hostip.cpp ${CMAKE_CURRENT_BINARY_DIR}/message.h)
 add_executable(clt-svr::svr ALIAS svr)
 
 set_target_properties(
@@ -92,7 +92,7 @@ target_link_libraries(svr
     fmt::fmt
     Threads::Threads)
 
-add_executable(clt source/client.cpp ${CMAKE_CURRENT_BINARY_DIR}/message.h)
+add_executable(clt source/client.cpp source/hostip.cpp ${CMAKE_CURRENT_BINARY_DIR}/message.h)
 add_executable(clt-svr::clt ALIAS clt)
 
 set_target_properties(

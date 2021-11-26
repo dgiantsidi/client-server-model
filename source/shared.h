@@ -2,6 +2,12 @@
 
 #include <cstdint>
 #include <cstring>
+#include <netdb.h>
+  #include <netinet/in.h>
+  #include <sys/socket.h>
+  #include <sys/types.h>
+
+
 
 #if !defined(LITTLE_ENDIAN)
 #  if defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__)
@@ -103,3 +109,33 @@ static auto secure_recv(int fd) -> std::pair<size_t, std::unique_ptr<char[]>> {
 
   return {actual_msg_size, std::move(buf)};
 }
+
+extern hostent* hostip;
+
+#if 0
+inline auto find_host_ip(std::string hostname) -> struct hostent * {
+  static struct hostent * he = nullptr;
+
+  if (he == nullptr)
+    he = gethostbyname(hostname.c_str());
+  if (he == nullptr) {
+    // NOLINTNEXTLINE(concurrency-mt-unsafe)
+    exit(1);
+  }
+
+  // **** block of code finds the localhost IP ****
+  constexpr auto max_hostname_length = 512ULL;
+  char hostn[max_hostname_length];  // placeholder for the hostname
+
+  // if the gethostname returns a name then the program will get the ip
+  // address using gethostbyname
+  if ((gethostname(hostn, sizeof(hostn))) == 0) {
+  } else {
+    fmt::print(
+        "ERROR:FC4539 - IP Address not found.\n");  // error if the hostname
+                                                    // is not found
+  }
+
+  return he;
+}
+#endif

@@ -23,25 +23,7 @@ auto ServerThread::operator=(ServerThread && other) noexcept -> ServerThread & {
 }
 
 void ServerThread::create_communication_pair(int listening_socket) {
-  auto * he = gethostbyname("localhost");
-  if (he == nullptr) {
-    // NOLINTNEXTLINE(concurrency-mt-unsafe)
-    exit(1);
-  }
-
-  // **** block of code finds the localhost IP ****
-  constexpr auto max_hostname_length = 512ULL;
-  char hostn[max_hostname_length];  // placeholder for the hostname
-
-  // if the gethostname returns a name then the program will get the ip
-  // address using gethostbyname
-  if ((gethostname(hostn, sizeof(hostn))) == 0) {
-  } else {
-    fmt::print(
-        "ERROR:FC4539 - IP Address not found.\n");  // error if the hostname
-                                                    // is not found
-  }
-  //****************************************************************
+  auto * he = hostip;
 
   auto [bytecount, buffer] = secure_recv(listening_socket);
   if (bytecount == 0) {

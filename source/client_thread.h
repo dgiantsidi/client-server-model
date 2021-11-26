@@ -11,29 +11,7 @@ class ClientThread {
 public:
   void connect_to_the_server(int port, char const * hostname) {
     // NOLINTNEXTLINE(concurrency-mt-unsafe)
-    hostent * he = gethostbyname(hostname);
-    if (he == nullptr) {
-      // NOLINTNEXTLINE(concurrency-mt-unsafe)
-      exit(1);
-    }
-
-    // **** block of code finds the localhost IP ****
-    constexpr auto max_hostname_length = 512ULL;
-    char hostn[max_hostname_length];  // placeholder for the hostname
-
-    //    hostent * hostIP;  // placeholder for the IP address
-
-    // if the gethostname returns a name then the program will get the ip
-    // address using gethostbyname
-    if ((gethostname(hostn, sizeof(hostn))) == 0) {
-      //     hostIP = gethostbyname(hostn);  // the netdb.h function
-      //     gethostbyname
-    } else {
-      fmt::print(
-          "ERROR:FC4539 - IP Address not found.\n");  // error if the hostname
-                                                      // is not found
-    }
-    //****************************************************************
+    hostent * he = hostip; //find_host_ip(hostname);
 
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
       fmt::print("socket\n");
