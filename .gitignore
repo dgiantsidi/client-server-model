@@ -10,3 +10,4 @@ CMakeLists.txt.user
 result
 .envrc
 .ccls-cache/
+.gdb_history
