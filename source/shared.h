@@ -12,7 +12,7 @@
 #endif
 
 static constexpr auto length_size_field = sizeof(uint32_t);
-static constexpr auto client_base_addr  = 30500;
+static constexpr auto client_base_addr = 30500;
 
 /**
  ** It takes as an argument a ptr to an array of size 4 or bigger and
