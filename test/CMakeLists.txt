@@ -9,5 +9,6 @@ target_link_libraries(clt-svr-model_test PRIVATE clt-svr-proto_lib ${Protobuf_LI
 target_compile_features(clt-svr-model_test PRIVATE cxx_std_20)
 
 add_test(NAME clt-svr-model_test COMMAND clt-svr-model_test)
+add_test(NAME small-clt-svr_test COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/source/small-test.py ${CMAKE_BINARY_DIR})
 
 add_folders(Test)
