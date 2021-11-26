@@ -20,13 +20,13 @@ constexpr std::string_view usage = "usage: ./server <nb_server_threads> <port>";
 // how many pending connections the queue will hold?
 constexpr int backlog = 1024;
 
-auto construct_reply(int op_id, int success, int txn_id, std::string const & val)
+auto construct_reply(int op_id, int success, int txn_id, std::string_view val)
     -> std::unique_ptr<char[]> {
   server::server_response::reply rep;
   rep.set_op_id(op_id);
   rep.set_success(success);
   rep.set_txn_id(txn_id);
-  rep.set_value(val);
+  rep.set_value(val.data(), val.size());
 
   std::string msg_str;
   rep.SerializeToString(&msg_str);
@@ -54,18 +54,15 @@ void process_get(KvStore const & db,
                  sockets::client_msg::OperationData const & op,
                  int fd) {
   auto ret_val = db.get(op.key());
-  if (!ret_val) {
-    fmt::print("Key: {} not found\n", op.key());
-  }
 
-  auto rep_ptr = construct_reply(op.op_id(),
-                                 ((ret_val) ? 1 : 0),
-                                 -1 /* not a txn */,
-                                 std::string(*ret_val));
-
+  auto rep_ptr = [&ret_val, &op]() {
+    if (!ret_val) {
+      fmt::print("Key: [] not found\n", op.key());
+      return construct_reply(op.op_id(), 0, -1, "");
+    }
+    return construct_reply(op.op_id(), 1, -1, *ret_val);
+  }();
   args->enqueue_reply(fd, std::move(rep_ptr));
-  auto val = *ret_val;
-  (void)val;
 }
 
 void process_txn(const sockets::client_msg::OperationData & op, int fd) {
