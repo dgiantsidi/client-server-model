@@ -59,7 +59,7 @@ public:
 
     // init the listening socket
     int ret = 1;
-    port = 30500 + thread_id;
+    port = client_base_addr + thread_id;
     sent_init_connection_request(port);
 
     int repfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -98,9 +98,9 @@ public:
 
     socklen_t sin_size = sizeof(sockaddr_in);
     fmt::print("waiting for new connections ..\n");
-    sockaddr_in _their_addr {};
+    sockaddr_in tmp_addr {};
     auto new_fd = accept4(repfd,
-                          reinterpret_cast<sockaddr *>(&_their_addr),
+                          reinterpret_cast<sockaddr *>(&tmp_addr),
                           &sin_size,
                           SOCK_CLOEXEC);
     if (new_fd == -1) {

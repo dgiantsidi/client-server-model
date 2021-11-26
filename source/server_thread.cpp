@@ -33,25 +33,22 @@ void ServerThread::create_communication_pair(int listening_socket) {
   constexpr auto max_hostname_length = 512ULL;
   char hostn[max_hostname_length];  // placeholder for the hostname
 
-  //    hostent * hostIP;  // placeholder for the IP address
-
   // if the gethostname returns a name then the program will get the ip
   // address using gethostbyname
   if ((gethostname(hostn, sizeof(hostn))) == 0) {
-    //     hostIP = gethostbyname(hostn);  // the netdb.h function
-    //     gethostbyname
   } else {
     fmt::print(
         "ERROR:FC4539 - IP Address not found.\n");  // error if the hostname
                                                     // is not found
   }
   //****************************************************************
-  fmt::print("waiting here ..\n");
+
   auto [bytecount, buffer] = secure_recv(listening_socket);
   if (bytecount == 0) {
     fmt::print("Error on {}\n", __func__);
     exit(1);
   }
+
   sockets::client_msg msg;
   auto payload_sz = bytecount - 4;
   std::string tmp(buffer.get() + 4, payload_sz);
