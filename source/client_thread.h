@@ -11,7 +11,7 @@ class ClientThread {
 public:
   void connect_to_the_server(int port, char const * hostname) {
     // NOLINTNEXTLINE(concurrency-mt-unsafe)
-    hostent * he = hostip; //find_host_ip(hostname);
+    hostent * he = hostip;
 
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
       fmt::print("socket\n");
@@ -102,7 +102,9 @@ public:
     auto msg_size = msg_str.size();
     auto buf = std::make_unique<char[]>(msg_size + length_size_field);
     convert_int_to_byte_array(buf.get(), msg_size);
-    memcpy(buf.get() + length_size_field, msg_str.data(), msg_size);
+    memcpy(buf.get() + length_size_field,
+           msg_str.c_str(),
+           msg_size);
 
     secure_send(sockfd, buf.get(), msg_size + length_size_field);
   }
@@ -159,16 +161,16 @@ private:
   int thread_id = 0;
 
   /**
-   *  * It constructs the message to be sent.
-   *   * It takes as arguments a destination char ptr, the payload (data to be
-   * sent)
-   *    * and the payload size.
-   *     * It returns the expected message format at dst ptr;
-   *      *
-   *       *  |<---msg size (4 bytes)--->|<---payload (msg size bytes)--->|
-   *        *
-   *         *
-   *          */
+  * It constructs the message to be sent.
+  * It takes as arguments a destination char ptr, the payload (data to be
+   sent)
+  * and the payload size.
+  * It returns the expected message format at dst ptr;
+  *
+  *  |<---msg size (4 bytes)--->|<---payload (msg size bytes)--->|
+  *
+  *
+  */
   static void construct_message(char * dst,
                                 char * payload,
                                 size_t payload_size) {
@@ -177,9 +179,10 @@ private:
   }
 
   /**
-   *  * Sends to the connection defined by the fd, a message with a payload
-   * (data) of size len bytes.
-   *   */
+     * Sends to the connection defined by the fd, a message with a payload
+    (data) of size len bytes.
+      */
+#if 1
   static auto secure_send(int fd, char * data, size_t len)
       -> std::optional<size_t> {
     auto bytes = 0LL;
@@ -204,4 +207,5 @@ private:
 
     return len;
   }
+#endif
 };

@@ -111,19 +111,7 @@ private:
 
   void reset_fds();
 
-  /**
-   ** It returns the actual size of msg.
-   ** Not that msg might not contain all payload data.
-   ** The function expects at least that the msg contains the first 4 bytes that
-   ** indicate the actual size of the payload.
-   **/
-  static auto destruct_message(char * msg, size_t bytes)
-      -> std::optional<uint32_t>;
-
-  static auto read_n(int fd, char * buffer, size_t n) -> size_t;
-
-  static auto secure_recv(int fd) -> std::pair<size_t, std::unique_ptr<char[]>>;
-
+#if 0
   static auto secure_send(int fd, char * data, size_t len)
       -> std::optional<size_t> {
     auto bytes = 0LL;
@@ -146,6 +134,7 @@ private:
 
     return len;
   }
+#endif
 
   static void construct_message(char * dst,
                                 char * payload,
