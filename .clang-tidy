@@ -5,7 +5,6 @@ Checks: "*,\
   -google-readability-todo,\
   -altera-unroll-loops,\
   -fuchsia-*,\
-  fuchsia-multiple-inheritance,\
   -llvm-header-guard,\
   -llvm-include-order,\
   -llvmlibc-*,\
