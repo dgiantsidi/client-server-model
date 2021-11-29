@@ -29,6 +29,20 @@
         "clt-svr-model_DEVELOPER_MODE": "ON"
       }
     },
+     {
+      "name": "cppcheck",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_CXX_CPPCHECK": "cppcheck;--inline-suppr"
+      }
+    },
+    {
+      "name": "clang-tidy",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_CXX_CLANG_TIDY": "clang-tidy;--header-filter=${sourceDir}/*"
+      }
+    },
     {
       "name": "ci-std",
       "description": "This preset makes sure the project actually builds with at least the specified standard",
@@ -109,7 +123,7 @@
     },
     {
       "name": "ci-ubuntu",
-      "inherits": ["ci-build", "ci-unix", "clang-tidy", "cppcheck", "dev-mode"]
+      "inherits": ["ci-build", "ci-unix", "dev-mode"]
     },
     {
       "name": "ci-windows",
