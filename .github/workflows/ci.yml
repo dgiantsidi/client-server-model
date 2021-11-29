@@ -123,6 +123,7 @@ jobs:
       run: cmake --build build/sanitize -j 2
 
     - name: Test
+      timeout-minutes: 10
       working-directory: build/sanitize
       env:
         ASAN_OPTIONS: "strict_string_checks=1:\
@@ -200,6 +201,7 @@ jobs:
       run: cmake --install build  --prefix prefix
 
     - name: Test
+      timeout-minutes: 10
       working-directory: build
       run: ctest --output-on-failure -j 2
 
