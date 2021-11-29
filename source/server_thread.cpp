@@ -145,14 +145,24 @@ auto ServerThread::init() -> void {
 void ServerThread::get_new_connections() {
   std::unique_lock<std::mutex> lock(mtx);
   auto nb_connections = listening_sockets.size();
+  auto retires = 0ULL;
+  constexpr auto max_retries = 10ULL;
   while (nb_connections == 0) {
     fmt::print("{}: no connections\n", __PRETTY_FUNCTION__);
 
     using namespace std::chrono_literals;
     cv.wait_for(lock, 1000ms);
     nb_connections = listening_sockets.size();
-    if (nb_connections == 0 && should_exit)
+    if (nb_connections == 0 && should_exit) {
+      ++retires;
+      if (retires < max_retries) {
+        debug_print("[{}]: Rety {}/{}\n", __PRETTY_FUNCTION__, retires,
+                    max_retries);
+        continue;
+      }
+      debug_print("[{}]: No connection could be established...\n", __PRETTY_FUNCTION__);
       return;
+    }
   }
 }
 
