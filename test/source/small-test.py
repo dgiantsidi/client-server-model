@@ -20,7 +20,7 @@ def run_server(binary_dir: str) -> int:
   """
   Runs the server binary with the given binary_dir.
   """
-  return subprocess.call([binary_dir + "/svr", "4", str(PORT), "localhost"])
+  return subprocess.call([binary_dir + "/svr", "4", str(PORT), "localhost", "1", "10"])
 
 
 def main(argv: List[str]):

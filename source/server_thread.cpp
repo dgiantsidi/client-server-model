@@ -83,6 +83,8 @@ auto ServerThread::incomming_requests() -> int {
   if (retval == 0) {
     fmt::print("update connections\n");
     init();
+    if (should_exit)
+	    return 128;
   } else if (retval < 0) {
     fmt::print("timeout\n");
   }
@@ -145,8 +147,12 @@ void ServerThread::get_new_connections() {
   auto nb_connections = listening_sockets.size();
   while (nb_connections == 0) {
     fmt::print("{}: no connections\n", __PRETTY_FUNCTION__);
-    cv.wait(lock);
+    
+    using namespace std::chrono_literals;
+    cv.wait_for(lock, 1000ms);
     nb_connections = listening_sockets.size();
+if (nb_connections == 0 && should_exit)
+		  return;
   }
 }
 
