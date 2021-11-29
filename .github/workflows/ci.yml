@@ -194,14 +194,14 @@ jobs:
       run: cmake --preset=ci-${{ matrix.os }}
 
     - name: Build
-      run: cmake --build build --config Release -j 2
+      run: cmake --build build -j 2
 
     - name: Install
-      run: cmake --install build --config Release --prefix prefix
+      run: cmake --install build  --prefix prefix
 
     - name: Test
       working-directory: build
-      run: ctest --output-on-failure -C Release -j 2
+      run: ctest --output-on-failure -j 2
 
   docs:
     # Deploy docs only when builds succeed
