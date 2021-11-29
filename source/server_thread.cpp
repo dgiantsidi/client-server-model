@@ -32,8 +32,8 @@ void ServerThread::create_communication_pair(int listening_socket) {
   }
 
   sockets::client_msg msg;
-  auto payload_sz = bytecount - 4;
-  std::string tmp(buffer.get() + 4, payload_sz);
+  auto payload_sz = bytecount;
+  std::string tmp(buffer.get(), payload_sz);
   msg.ParseFromString(tmp);
 
   fmt::print("done here .. {}\n", msg.ops(0).port());
@@ -173,8 +173,8 @@ void ServerThread::post_replies() {
 
 auto ServerThread::process_req(int fd, size_t sz, char * buf) const -> void {
   sockets::client_msg msg;
-  auto payload_sz = sz - 4;
-  std::string tmp(buf + 4, payload_sz);
+  auto payload_sz = sz;
+  std::string tmp(buf, payload_sz);
   msg.ParseFromString(tmp);
   for (auto i = 0; i < msg.ops_size(); ++i) {
     auto const & op = msg.ops(i);

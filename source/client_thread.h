@@ -101,8 +101,7 @@ public:
 
     auto msg_size = msg_str.size();
     auto buf = std::make_unique<char[]>(msg_size + length_size_field);
-    convert_int_to_byte_array(buf.get(), msg_size);
-    memcpy(buf.get() + length_size_field, msg_str.c_str(), msg_size);
+    construct_message(buf.get(), msg_str.c_str(), msg_size);
 
     secure_send(sockfd, buf.get(), msg_size + length_size_field);
   }
@@ -157,53 +156,4 @@ public:
 private:
   int sockfd = -4, rep_fd = -1;
   int thread_id = 0;
-
-  /**
-  * It constructs the message to be sent.
-  * It takes as arguments a destination char ptr, the payload (data to be
-   sent)
-  * and the payload size.
-  * It returns the expected message format at dst ptr;
-  *
-  *  |<---msg size (4 bytes)--->|<---payload (msg size bytes)--->|
-  *
-  *
-  */
-  static void construct_message(char * dst,
-                                char * payload,
-                                size_t payload_size) {
-    convert_int_to_byte_array(dst, payload_size);
-    ::memcpy(dst + 4, payload, payload_size);
-  }
-
-  /**
-     * Sends to the connection defined by the fd, a message with a payload
-    (data) of size len bytes.
-      */
-#if 1
-  static auto secure_send(int fd, char * data, size_t len)
-      -> std::optional<size_t> {
-    auto bytes = 0LL;
-    auto remaining_bytes = len + 4;
-
-    std::unique_ptr<char[]> buf = std::make_unique<char[]>(len + 4);
-    construct_message(buf.get(), data, len);
-    char * tmp = buf.get();
-
-    while (remaining_bytes > 0) {
-      bytes = send(fd, tmp, remaining_bytes, 0);
-      if (bytes < 0) {
-        // @dimitra: the socket is in non-blocking mode; select() should be also
-        // applied
-        //             return -1;
-        //
-        return std::nullopt;
-      }
-      remaining_bytes -= bytes;
-      tmp += bytes;
-    }
-
-    return len;
-  }
-#endif
 };

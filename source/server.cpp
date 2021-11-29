@@ -33,8 +33,7 @@ auto construct_reply(int op_id, int success, int txn_id, std::string_view val)
 
   auto msg_size = msg_str.size();
   auto buf = std::make_unique<char[]>(msg_size + length_size_field);
-  convert_int_to_byte_array(buf.get(), msg_size);
-  memcpy(buf.get() + length_size_field, msg_str.data(), msg_size);
+  construct_message(buf.get(), msg_str.c_str(), msg_size);
   return buf;  // copy-elision
 }
 

@@ -69,3 +69,21 @@ auto secure_recv(int fd) -> std::pair<size_t, std::unique_ptr<char[]>>;
 extern hostent * hostip;
 
 auto secure_send(int fd, char * data, size_t len) -> std::optional<size_t>;
+
+/**
+ * It constructs the message to be sent.
+ * It takes as arguments a destination char ptr, the payload (data to be
+ sent)
+ * and the payload size.
+ * It returns the expected message format at dst ptr;
+ *
+ *  |<---msg size (4 bytes)--->|<---payload (msg size bytes)--->|
+ *
+ *
+ */
+inline void construct_message(char * dst,
+                              const char * payload,
+                              size_t payload_size) {
+  convert_int_to_byte_array(dst, payload_size);
+  ::memcpy(dst + length_size_field, payload, payload_size);
+}

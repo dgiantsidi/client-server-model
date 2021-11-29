@@ -111,38 +111,6 @@ private:
 
   void reset_fds();
 
-#if 0
-  static auto secure_send(int fd, char * data, size_t len)
-      -> std::optional<size_t> {
-    auto bytes = 0LL;
-    auto remaining_bytes = len;
-
-    char * tmp = data;
-
-    while (remaining_bytes > 0) {
-      bytes = send(fd, tmp, remaining_bytes, 0);
-      if (bytes < 0) {
-        // @dimitra: the socket is in non-blocking mode; select() should be also
-        // applied
-        //             return -1;
-        //
-        return std::nullopt;
-      }
-      remaining_bytes -= bytes;
-      tmp += bytes;
-    }
-
-    return len;
-  }
-#endif
-
-  static void construct_message(char * dst,
-                                char * payload,
-                                size_t payload_size) {
-    convert_int_to_byte_array(dst, payload_size);
-    ::memcpy(dst + 4, payload, payload_size);
-  }
-
   static void sent_request(int sockfd, char * request, size_t size) {
     if (auto numbytes = secure_send(sockfd, request, size); !numbytes) {
       // NOLINTNEXTLINE(concurrency-mt-unsafe)
