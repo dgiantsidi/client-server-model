@@ -15,18 +15,32 @@ def run_client(binary_dir: str) -> int:
   """
   Runs the client binary with the given binary_dir.
   """
+  sleep(0.5)
+#  return subprocess.Popen([binary_dir + "/clt", "10", "localhost", str(PORT), "20000"], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
   return subprocess.Popen([binary_dir + "/clt", "10", "localhost", str(PORT), "20000"])
 
 def run_server(binary_dir: str) -> int:
   """
   Runs the server binary with the given binary_dir.
   """
+#  return subprocess.Popen([binary_dir + "/svr", "4", str(PORT), "localhost", "1", "10"], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
   return subprocess.Popen([binary_dir + "/svr", "4", str(PORT), "localhost", "1", "10"])
 
 
 def complete(process, q):
   q.put(process.wait())
 
+
+class logger:
+  def __init__(self, name) -> None:
+    self.name = name
+
+  def __call__(self, stdout):
+    for line in stdout:
+      print(self.name + ": " + line.decode("utf-8").strip(), file=sys.stderr)
+
+def output(log, process):
+  threading.Thread(target=log, args=(process.stdout,)).start()
 
 def main(argv: List[str]):
   q = queue.Queue()
@@ -35,7 +49,11 @@ def main(argv: List[str]):
   args = parser.parse_args(argv[1:])
 
   server = run_server(args.binary_dir)
+#  svr_log = logger("svr")
+#  output(svr_log, server)
   client = run_client(args.binary_dir)
+#  clt_log = logger("clt")
+#  output(clt_log, client)
   threads = [threading.Thread(target=complete, args=(p, q)) for p in [server, client]]
   for t in threads:
     t.start()
