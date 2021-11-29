@@ -12,7 +12,10 @@
 
 #if !defined(NDEBUG)
 #  include <fmt/format.h>
-#  define debug_print(...) fmt::print(__VA_ARGS__)
+template<class... Args>
+void debug_print(fmt::format_string<Args...> fmt, Args &&... args) {
+  fmt::print(fmt, std::forward<Args>(args)...);
+}
 #else
 template<class... Args>
 void debug_print(Args &&...) {}
