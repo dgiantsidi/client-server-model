@@ -156,11 +156,12 @@ void ServerThread::get_new_connections() {
     if (nb_connections == 0 && should_exit) {
       ++retires;
       if (retires < max_retries) {
-        debug_print("[{}]: Rety {}/{}\n", __PRETTY_FUNCTION__, retires,
-                    max_retries);
+        debug_print(
+            "[{}]: Rety {}/{}\n", __PRETTY_FUNCTION__, retires, max_retries);
         continue;
       }
-      debug_print("[{}]: No connection could be established...\n", __PRETTY_FUNCTION__);
+      debug_print("[{}]: No connection could be established...\n",
+                  __PRETTY_FUNCTION__);
       return;
     }
   }

@@ -47,8 +47,12 @@ static auto read_n(int fd, char * buffer, size_t n) -> size_t {
 auto secure_recv(int fd) -> std::pair<size_t, std::unique_ptr<char[]>> {
   char dlen[4];
 
-  if (auto byte_read = read_n(fd, dlen, length_size_field); byte_read != length_size_field) {
-    debug_print("[{}] Length of size field does not match got {} expected {}\n", __func__, byte_read, length_size_field);
+  if (auto byte_read = read_n(fd, dlen, length_size_field);
+      byte_read != length_size_field) {
+    debug_print("[{}] Length of size field does not match got {} expected {}\n",
+                __func__,
+                byte_read,
+                length_size_field);
     return {0, nullptr};
   }
 
@@ -61,8 +65,12 @@ auto secure_recv(int fd) -> std::pair<size_t, std::unique_ptr<char[]>> {
   auto actual_msg_size = *actual_msg_size_opt;
   auto buf = std::make_unique<char[]>(static_cast<size_t>(actual_msg_size) + 1);
   buf[actual_msg_size] = '\0';
-  if (auto byte_read = read_n(fd, buf.get(), actual_msg_size); byte_read != actual_msg_size) {
-    debug_print("[{}] Length of message is incorrect got {} expected {}\n", __func__, byte_read, actual_msg_size);
+  if (auto byte_read = read_n(fd, buf.get(), actual_msg_size);
+      byte_read != actual_msg_size) {
+    debug_print("[{}] Length of message is incorrect got {} expected {}\n",
+                __func__,
+                byte_read,
+                actual_msg_size);
     return {0, nullptr};
   }
 

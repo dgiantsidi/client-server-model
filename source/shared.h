@@ -11,11 +11,11 @@
 #include <sys/types.h>
 
 #if !defined(NDEBUG)
-#include <fmt/format.h>
-#define debug_print(...) fmt::print(__VA_ARGS__)
+#  include <fmt/format.h>
+#  define debug_print(...) fmt::print(__VA_ARGS__)
 #else
-template <class ... Args>
-void debug_print(Args && ...) {}
+template<class... Args>
+void debug_print(Args &&...) {}
 #endif
 
 #if !defined(LITTLE_ENDIAN)
