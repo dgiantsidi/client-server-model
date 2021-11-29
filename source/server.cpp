@@ -106,7 +106,7 @@ static void processing_func(KvStore & db, ServerThread * args) {
     int ret = args->incomming_requests();
 
     if (ret == 128)
-	    return;
+      return;
     if (ret > 0) {
       // new req
       // pass func1 as callback that will do the
@@ -136,8 +136,7 @@ auto main(int args, char * argv[]) -> int {
   auto one_run = std::stoull(argv[4]);
   auto total_clients = -1;
   if (one_run)
-	  total_clients = std::stoull(argv[5]);
-
+    total_clients = std::stoull(argv[5]);
 
   std::vector<ServerThread> server_threads;
   server_threads.reserve(nb_server_threads);
@@ -191,9 +190,9 @@ auto main(int args, char * argv[]) -> int {
     fmt::print("waiting for new connections ..\n");
     sockaddr_in their_addr {};
     if (one_run) {
-	    if (nb_clients == total_clients) {
-		    break;
-	    }
+      if (nb_clients == total_clients) {
+        break;
+      }
     }
     auto new_fd = accept4(sockfd,
                           reinterpret_cast<sockaddr *>(&their_addr),
@@ -219,13 +218,13 @@ auto main(int args, char * argv[]) -> int {
   }
 
   for (size_t i = 0; i < server_threads.size(); i++) {
-	  server_threads[i].should_exit = true;
+    server_threads[i].should_exit = true;
   }
- for (auto& th : threads) {
-	 th.join();
- }
+  for (auto & th : threads) {
+    th.join();
+  }
 
- fmt::print("{} all threads joined\n", __func__);
+  fmt::print("{} all threads joined\n", __func__);
 
   return 0;
 }

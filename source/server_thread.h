@@ -93,6 +93,7 @@ public:
   void init();
 
   bool should_exit = false;
+
 private:
   int id;
   int max_fd;

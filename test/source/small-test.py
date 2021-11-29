@@ -14,7 +14,7 @@ def run_client(binary_dir: str) -> int:
   """
   Runs the client binary with the given binary_dir.
   """
-  os._exit(subprocess.call([binary_dir + "/clt", "10", "localhost", str(PORT), "20000"]))
+  os._exit(subprocess.call([binary_dir + "/clt", "10", "localhost", str(PORT), "200"]))
 
 def run_server(binary_dir: str) -> int:
   """
