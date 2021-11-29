@@ -32,7 +32,7 @@ def main(argv: List[str]):
   client_thread = threading.Thread(target=run_client, args=(args.binary_dir,))
 
   server_thread.start()
-  sleep(0.2)
+  sleep(0.5)
   client_thread.start()
 
   client_thread.join()
