@@ -98,11 +98,6 @@ auto ServerThread::incomming_requests() -> std::variant<int, Timeout, ErrNo> {
   if (retval == 0) {
     fmt::print("update connections\n");
     init();
-    if (should_exit.load(std::memory_order_relaxed)) {
-      std::atomic_thread_fence(std::memory_order_acquire);
-      return Timeout {};
-    }
-    fmt::print("timeout\n");
     return Timeout {};
   } else if (retval < 0) {
     return ErrNo();
