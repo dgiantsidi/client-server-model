@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <optional>
+#include <variant>
 #include <vector>
 
 #include "server_thread.h"
@@ -28,6 +29,7 @@ void ServerThread::create_communication_pair(int listening_socket) {
   auto [bytecount, buffer] = secure_recv(listening_socket);
   if (bytecount == 0) {
     fmt::print("Error on {}\n", __func__);
+    // NOLINTNEXTLINE(concurrency-mt-unsafe)
     exit(1);
   }
 
@@ -74,7 +76,8 @@ void ServerThread::update_connections(int new_sock_fd) {
   cv.notify_one();
 }
 
-auto ServerThread::incomming_requests() -> int {
+auto ServerThread::incomming_requests()
+    -> std::optional<std::variant<ErrNo, int>> {
   constexpr auto timeout_s = 10ULL;
   timeval timeout {};
   timeout.tv_sec = timeout_s;
@@ -83,10 +86,13 @@ auto ServerThread::incomming_requests() -> int {
   if (retval == 0) {
     fmt::print("update connections\n");
     init();
-    if (should_exit)
-      return 128;
-  } else if (retval < 0) {
+    if (should_exit.load(std::memory_order_relaxed)) {
+      std::atomic_thread_fence(std::memory_order_acquire);
+      return std::nullopt;
+    }
     fmt::print("timeout\n");
+  } else if (retval < 0) {
+    return ErrNo();
   }
   return retval;
 }
@@ -145,21 +151,14 @@ auto ServerThread::init() -> void {
 void ServerThread::get_new_connections() {
   std::unique_lock<std::mutex> lock(mtx);
   auto nb_connections = listening_sockets.size();
-  auto retires = 0ULL;
-  constexpr auto max_retries = 10ULL;
   while (nb_connections == 0) {
     fmt::print("{}: no connections\n", __PRETTY_FUNCTION__);
 
     using namespace std::chrono_literals;
     cv.wait_for(lock, 1000ms);
     nb_connections = listening_sockets.size();
-    if (nb_connections == 0 && should_exit) {
-      ++retires;
-      if (retires < max_retries) {
-        debug_print(
-            "[{}]: Rety {}/{}\n", __PRETTY_FUNCTION__, retires, max_retries);
-        continue;
-      }
+    if (nb_connections == 0 && should_exit.load(std::memory_order_relaxed)) {
+      std::atomic_thread_fence(std::memory_order_acquire);
       debug_print("[{}]: No connection could be established...\n",
                   __PRETTY_FUNCTION__);
       return;
@@ -200,5 +199,5 @@ auto ServerThread::process_req(int fd, size_t sz, char * buf) const -> void {
 }
 
 void ServerThread::enqueue_reply(int fd, std::unique_ptr<char[]> rep) {
-  queue_with_replies.push_back({fd, std::move(rep)});
+  queue_with_replies.emplace_back(fd, std::move(rep));
 }

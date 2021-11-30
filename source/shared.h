@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cerrno>
 #include <cstdint>
 #include <cstring>
 #include <memory>
@@ -31,6 +32,13 @@ void debug_print(Args &&...) {}
 
 static constexpr auto length_size_field = sizeof(uint32_t);
 static constexpr auto client_base_addr = 30500;
+
+template<class... Ts>
+struct overloaded : Ts... {  // NOLINT
+  using Ts::operator()...;
+};
+template<class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
 
 /**
  ** It takes as an argument a ptr to an array of size 4 or bigger and
@@ -74,7 +82,29 @@ inline auto convert_int_to_byte_array(char * dst, uint32_t sz) noexcept
   }
 }
 
-auto secure_recv(int fd) -> std::pair<size_t, std::unique_ptr<char[]>>;
+class ErrNo {
+  int err_no;
+
+public:
+  [[nodiscard]] inline ErrNo() noexcept
+      : err_no(errno) {}
+  inline explicit ErrNo(int err_no) noexcept
+      : err_no(err_no) {}
+
+  [[nodiscard]] inline auto msg() const noexcept -> std::string_view {
+    // NOLINTNEXTLINE(concurrency-mt-unsafe)
+    return strerror(err_no);
+  }
+
+  [[nodiscard]] inline auto get_err_no() const noexcept -> int {
+    return err_no;
+  }
+
+  [[nodiscard]] inline explicit operator int() const noexcept { return err_no; }
+};
+
+[[nodiscard]] auto secure_recv(int fd)
+    -> std::pair<size_t, std::unique_ptr<char[]>>;
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 extern hostent * hostip;

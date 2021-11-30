@@ -118,7 +118,8 @@ public:
   void recv_ack() {
     auto [bytecount, buffer] = secure_recv(rep_fd);
     if (buffer == nullptr) {
-      printf("ERROR\n");
+      fmt::print("ERROR\n");
+      // NOLINTNEXTLINE(concurrency-mt-unsafe)
       exit(2);
     }
     replies++;
@@ -151,6 +152,7 @@ public:
     }
   }
 
+  // NOLINTNEXTLINE(cppcoreguidelines-non-private-member-variables-in-classes)
   int32_t replies = 0;
 
 private:

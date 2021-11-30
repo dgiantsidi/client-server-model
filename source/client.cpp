@@ -121,6 +121,7 @@ void client(ClientOP * client_op, int port, int nb_messages) {
 
   c_thread.connect_to_the_server(port, "localhost");
 
+  // NOLINTNEXTLINE(concurrency-mt-unsafe)
   sleep(2);
 
   auto expected_replies = 0;
@@ -137,6 +138,7 @@ void client(ClientOP * client_op, int port, int nb_messages) {
 }
 
 auto main(int args, char * argv[]) -> int {
+  // NOLINTNEXTLINE(concurrency-mt-unsafe)
   hostip = gethostbyname("localhost");
   constexpr auto n_expected_args = 5;
   if (args < n_expected_args) {

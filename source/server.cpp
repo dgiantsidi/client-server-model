@@ -64,7 +64,7 @@ void process_get(KvStore const & db,
   args->enqueue_reply(fd, std::move(rep_ptr));
 }
 
-void process_txn(const sockets::client_msg::OperationData & op, int fd) {
+void process_txn(const sockets::client_msg::OperationData & op, int /*fd*/) {
   switch (op.type()) {
     case sockets::client_msg::TXN_START: {
       break;
@@ -103,18 +103,30 @@ static void processing_func(KvStore & db, ServerThread * args) {
   args->register_callback(sockets::client_msg::TXN_COMMIT, process_txn);
   args->register_callback(sockets::client_msg::TXN_ABORT, process_txn);
   for (;;) {
-    int ret = args->incomming_requests();
+    auto ret = args->incomming_requests();
 
-    if (ret == 128)
+    if (!ret) {
       return;
-    if (ret > 0) {
-      // new req
-      // pass func1 as callback that will do the
-      // actual req processing
-      args->get_new_requests();
-      args->post_replies();
-      continue;
     }
+
+    auto constexpr func_name = __func__;
+    std::visit(
+        overloaded {[&args, func_name](int n_fd) {
+                      if (n_fd == 0) {
+                        debug_print("[{}] Timeout\n", func_name);
+                      }
+                      if (n_fd < 0) {
+                        auto error_msg = fmt::format(
+                            "Got impossible return value {}. Value is not "
+                            "allowed to be smaller than 0",
+                            n_fd);
+                        throw std::runtime_error(error_msg);
+                      }
+                      args->get_new_requests();
+                      args->post_replies();
+                    },
+                    [](ErrNo err) { fmt::print("Error: {}\n", err.msg()); }},
+        *ret);
   }
 }
 
@@ -134,9 +146,10 @@ auto main(int args, char * argv[]) -> int {
   auto port = std::stoull(argv[2]);
 
   auto one_run = std::stoull(argv[4]);
-  auto total_clients = -1;
-  if (one_run)
+  auto total_clients = 0ULL;
+  if (one_run) {
     total_clients = std::stoull(argv[5]);
+  }
 
   std::vector<ServerThread> server_threads;
   server_threads.reserve(nb_server_threads);
@@ -217,9 +230,11 @@ auto main(int args, char * argv[]) -> int {
     }
   }
 
-  for (size_t i = 0; i < server_threads.size(); i++) {
-    server_threads[i].should_exit = true;
+  std::atomic_thread_fence(std::memory_order_release);
+  for (auto & t : server_threads) {
+    t.should_exit.store(true, std::memory_order_relaxed);
   }
+
   for (auto & th : threads) {
     th.join();
   }

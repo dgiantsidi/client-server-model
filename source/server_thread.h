@@ -76,7 +76,7 @@ public:
 
   void update_connections(int new_sock_fd);
 
-  auto incomming_requests() -> int;
+  auto incomming_requests() -> std::optional<std::variant<ErrNo, int>>;
 
   void cleanup_connection(int dead_connection);
   void create_communication_pair(int listening_socket);
@@ -92,7 +92,8 @@ public:
 
   void init();
 
-  bool should_exit = false;
+  // NOLINTNEXTLINE(cppcoreguidelines-non-private-member-variables-in-classes)
+  std::atomic<bool> should_exit {false};
 
 private:
   int id;
