@@ -12,20 +12,20 @@
 #include <sys/types.h>
 
 #if !defined(NDEBUG)
-#include <fmt/format.h>
-#if 0
+#  include <fmt/format.h>
+#  if 0
 template<class... Args>
 void debug_print(fmt::format_string<Args...> fmt, Args &&... args) {
   fmt::print(fmt, std::forward<Args>(args)...);
 }
-#else // 0
-//NOLINTNEXTLINE(readability-identifier-naming)
-#define debug_print(...) fmt::print(__VA_ARGS__)
-#endif // 0
-#else // !defined(NDEBUG)
+#  else  // 0
+// NOLINTNEXTLINE(readability-identifier-naming)
+#    define debug_print(...) fmt::print(__VA_ARGS__)
+#  endif  // 0
+#else  // !defined(NDEBUG)
 template<class... Args>
 void debug_print(Args &&...) {}
-#endif // !defined(NDEBUG)
+#endif  // !defined(NDEBUG)
 
 #if !defined(LITTLE_ENDIAN)
 #  if defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__)
