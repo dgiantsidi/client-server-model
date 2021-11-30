@@ -36,10 +36,6 @@ add_custom_command(
     COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/scripts/message_hdr.py ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/message.h ${PROTO_HDRS_CLIENT} ${PROTO_HDRS_SERVER}
 )
 
-list(APPEND TEST_LIST ${PROTO_HDRS_CLIENT} ${PROTO_HDRS_SERVER})
-
-message(STATUS "${TEST_LIST}")
-
 add_library(
     clt-svr-proto_lib OBJECT
     ${PROTO_SRCS_CLIENT}
