@@ -40,6 +40,8 @@ inline void unimplemented(sockets::client_msg::OperationData const & msg,
 
 class ServerThread {
 public:
+  struct Timeout {};
+
   constexpr static size_t n_ops = sockets::client_msg::OperationType_ARRAYSIZE;
   using CallbackT =
       std::function<void(sockets::client_msg::OperationData const &, int fd)>;
@@ -76,7 +78,7 @@ public:
 
   void update_connections(int new_sock_fd);
 
-  auto incomming_requests() -> std::optional<std::variant<ErrNo, int>>;
+  auto incomming_requests() -> std::variant<int, Timeout, ErrNo>;
 
   void cleanup_connection(int dead_connection);
   void create_communication_pair(int listening_socket);

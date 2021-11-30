@@ -90,6 +90,7 @@ void process_txn(const sockets::client_msg::OperationData & op, int /*fd*/) {
 }
 
 static void processing_func(KvStore & db, ServerThread * args) {
+  auto constexpr func_name = __func__;
   args->init();
   args->register_callback(sockets::client_msg::TXN_START, process_txn);
   args->register_callback(
@@ -102,31 +103,37 @@ static void processing_func(KvStore & db, ServerThread * args) {
   args->register_callback(sockets::client_msg::TXN_GET, process_txn);
   args->register_callback(sockets::client_msg::TXN_COMMIT, process_txn);
   args->register_callback(sockets::client_msg::TXN_ABORT, process_txn);
-  for (;;) {
+  for (bool should_continue = true; should_continue;) {
     auto ret = args->incomming_requests();
 
-    if (!ret) {
-      return;
-    }
-
-    auto constexpr func_name = __func__;
-    std::visit(
-        overloaded {[&args, func_name](int n_fd) {
-                      if (n_fd == 0) {
-                        debug_print("[{}] Timeout\n", func_name);
-                      }
-                      if (n_fd < 0) {
-                        auto error_msg = fmt::format(
-                            "Got impossible return value {}. Value is not "
-                            "allowed to be smaller than 0",
-                            n_fd);
-                        throw std::runtime_error(error_msg);
-                      }
-                      args->get_new_requests();
-                      args->post_replies();
-                    },
-                    [](ErrNo err) { fmt::print("Error: {}\n", err.msg()); }},
-        *ret);
+    should_continue = std::visit(
+        overloaded {
+            [&args, func_name](int n_fd) -> bool {
+              if (n_fd <= 0) {
+                auto error_msg = fmt::format(
+                    "[{}] Got impossible return value {}. Value must be "
+                    "greater 0",
+                    func_name,
+                    n_fd);
+                throw std::runtime_error(error_msg);
+              }
+              args->get_new_requests();
+              args->post_replies();
+              return true;
+            },
+            [args, func_name](ServerThread::Timeout /*timeout*/) -> bool {
+              if (args->should_exit.load(std::memory_order_relaxed)) {
+                std::atomic_thread_fence(std::memory_order_acquire);
+                return false;
+              }
+              debug_print("[{}] Timeout\n", func_name);
+              return true;
+            },
+            [](ErrNo err) -> bool {
+              fmt::print("Error: {}\n", err.msg());
+              return false;
+            }},
+        ret);
   }
 }
 

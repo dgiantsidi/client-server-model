@@ -76,8 +76,7 @@ void ServerThread::update_connections(int new_sock_fd) {
   cv.notify_one();
 }
 
-auto ServerThread::incomming_requests()
-    -> std::optional<std::variant<ErrNo, int>> {
+auto ServerThread::incomming_requests() -> std::variant<int, Timeout, ErrNo> {
   constexpr auto timeout_s = 10ULL;
   timeval timeout {};
   timeout.tv_sec = timeout_s;
@@ -88,9 +87,10 @@ auto ServerThread::incomming_requests()
     init();
     if (should_exit.load(std::memory_order_relaxed)) {
       std::atomic_thread_fence(std::memory_order_acquire);
-      return std::nullopt;
+      return Timeout {};
     }
     fmt::print("timeout\n");
+    return Timeout {};
   } else if (retval < 0) {
     return ErrNo();
   }
