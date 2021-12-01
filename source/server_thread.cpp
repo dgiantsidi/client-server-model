@@ -59,7 +59,7 @@ void ServerThread::create_communication_pair(int listening_socket) {
               reinterpret_cast<sockaddr *>(&their_addr),
               sizeof(struct sockaddr))
       == -1) {
-    fmt::print("connect %d\n", errno);
+    fmt::print("connect {}\n", errno);
     // NOLINTNEXTLINE(concurrency-mt-unsafe)
     exit(1);
   }
