@@ -246,7 +246,7 @@ auto main(int args, char * argv[]) -> int {
     th.join();
   }
 
-  fmt::print("{} all threads joined\n", __func__);
+  fmt::print("[{}] all threads joined .. success\n", __func__);
 
   return 0;
 }
