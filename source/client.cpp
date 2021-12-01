@@ -29,9 +29,11 @@
 #include "client_thread.h"
 #include "message.h"
 #include "shared.h"
+#include "workload_traces/generate_traces.h"
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 std::atomic<int> threads_ids {0};
+std::vector<::Workload::TraceCmd> traces;
 
 class ClientOP {
   static constexpr auto max_n_operations = 100ULL;
@@ -142,6 +144,12 @@ void client(ClientOP * client_op, int port, int nb_messages) {
 }
 
 auto main(int args, char * argv[]) -> int {
+  // initialize workload
+  std::string file = "workload_traces/12K_traces.txt";
+  // reserve space for the vector --
+  traces.reserve(1000000);
+  traces = ::Workload::trace_init(file, gets_per_mille);
+
   // NOLINTNEXTLINE(concurrency-mt-unsafe)
   hostip = gethostbyname("localhost");
   constexpr auto n_expected_args = 5;

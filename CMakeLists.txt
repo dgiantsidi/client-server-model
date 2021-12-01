@@ -63,6 +63,7 @@ add_library(
     shared_lib OBJECT
     source/shared.cpp
     source/hostip.cpp
+    source/workload_traces/generate_traces.cpp
 )
 
 target_compile_features(shared_lib PUBLIC cxx_std_20)
