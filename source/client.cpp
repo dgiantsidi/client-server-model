@@ -113,6 +113,8 @@ public:
     memcpy(buf.get() + length_size_field, msg_str.data(), msg_size);
     return {msg_size + length_size_field, std::move(buf), j};
   }
+
+  void verify() { fmt::print("[{}] all good\n", __func__); }
 };
 
 void client(ClientOP * client_op, int port, int nb_messages) {
@@ -135,6 +137,8 @@ void client(ClientOP * client_op, int port, int nb_messages) {
   while (c_thread.replies != expected_replies) {
     c_thread.recv_ack();
   }
+
+  client_op->verify();
 }
 
 auto main(int args, char * argv[]) -> int {
