@@ -2,6 +2,7 @@
 #include <optional>
 #include <variant>
 #include <vector>
+#include <string.h>
 
 #include "server_thread.h"
 
@@ -43,7 +44,7 @@ void ServerThread::create_communication_pair(int listening_socket) {
   int sockfd = -1;
   int port = msg.ops(0).port();
   if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-    fmt::print("socket\n");
+    fmt::print("socket {}\n", std::strerror(errno));
     // NOLINTNEXTLINE(concurrency-mt-unsafe)
     exit(1);
   }
@@ -59,7 +60,7 @@ void ServerThread::create_communication_pair(int listening_socket) {
               reinterpret_cast<sockaddr *>(&their_addr),
               sizeof(struct sockaddr))
       == -1) {
-    fmt::print("connect {}\n", errno);
+    fmt::print("connect {}\n", std::strerror(errno));
     // NOLINTNEXTLINE(concurrency-mt-unsafe)
     exit(1);
   }
