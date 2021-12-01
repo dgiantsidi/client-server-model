@@ -1,4 +1,5 @@
 #include <cstdint>
+#include <cstring>
 #include <optional>
 #include <variant>
 #include <vector>
@@ -7,7 +8,6 @@
 
 #include <netdb.h>
 #include <netinet/in.h>
-#include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 
@@ -56,12 +56,24 @@ void ServerThread::create_communication_pair(int listening_socket) {
   their_addr.sin_addr = *(reinterpret_cast<in_addr *>(he->h_addr));
   memset(&(their_addr.sin_zero), 0, sizeof(their_addr.sin_zero));
 
-  if (connect(sockfd,
-              reinterpret_cast<sockaddr *>(&their_addr),
-              sizeof(struct sockaddr))
-      == -1) {
-    fmt::print("connect {}\n", std::strerror(errno));
-    // NOLINTNEXTLINE(concurrency-mt-unsafe)
+  bool successful_connection = false;
+  for (size_t retry = 0; retry < number_of_connect_attempts; retry++) {
+    if (connect(sockfd,
+                reinterpret_cast<sockaddr *>(&their_addr),
+                sizeof(struct sockaddr))
+        == -1) {
+      //   	fmt::print("connect {}\n", std::strerror(errno));
+      // NOLINTNEXTLINE(concurrency-mt-unsafe)
+      sleep(1);
+    } else {
+      successful_connection = true;
+      break;
+    }
+  }
+  if (!successful_connection) {
+    fmt::print("[{}] could not connect to client after {} attempts ..\n",
+               __func__,
+               number_of_connect_attempts);
     exit(1);
   }
   fmt::print("{} {}\n", listening_socket, sockfd);

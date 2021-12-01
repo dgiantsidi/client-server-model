@@ -37,7 +37,7 @@ void debug_print(Args &&...) {}
 
 static constexpr auto length_size_field = sizeof(uint32_t);
 static constexpr auto client_base_addr = 30500;
-
+static constexpr auto number_of_connect_attempts = 20;
 template<class... Ts>
 struct overloaded : Ts... {  // NOLINT
   using Ts::operator()...;
