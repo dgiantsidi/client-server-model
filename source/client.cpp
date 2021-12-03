@@ -35,6 +35,7 @@
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 std::atomic<int> threads_ids {0};
 int nb_clients = -1;
+int nb_messages = 1200;
 std::vector<::Workload::TraceCmd> traces;
 
 class ClientOP {
@@ -145,7 +146,12 @@ public:
       (this->*operation_func)(operation_data, it);
     }
 
-    it++;
+    if (it != traces.end())
+      it++;
+
+    else
+      it = traces.begin() + nb_messages / nb_clients * (rand() % nb_clients);
+
     std::string msg_str;
     msg.SerializeToString(&msg_str);
 
@@ -215,12 +221,18 @@ void client(ClientOP * client_op, int port, int nb_messages) {
 
 auto main(int args, char * argv[]) -> int {
   // initialize workload
+
   std::string file =
       "../../source/workload_traces/"
       "12K_traces.txt";
+  // file =
+  // "/home/dimitra/workspace/client-server-model/source/workload_traces/12K_traces.txt";
   // reserve space for the vector --
   traces.reserve(1000000);
   traces = ::Workload::trace_init(file, gets_per_mille);
+  if (traces.size() == 0) {
+    fmt::print("workload empty\n");
+  }
 
   // NOLINTNEXTLINE(concurrency-mt-unsafe)
   hostip = gethostbyname("localhost");
@@ -234,7 +246,7 @@ auto main(int args, char * argv[]) -> int {
 
   nb_clients = std::stoull(argv[1]);
   auto port = std::stoull(argv[3]);
-  auto nb_messages = std::stoull(argv[4]);
+  nb_messages = std::stoull(argv[4]);
 
   // creating the client threads
   std::vector<std::thread> threads;
