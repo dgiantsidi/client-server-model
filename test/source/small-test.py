@@ -17,7 +17,7 @@ def run_client(binary_dir: str) -> int:
   """
   sleep(0.5)
 #  return subprocess.Popen([binary_dir + "/clt", "10", "localhost", str(PORT), "20000"], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
-  return subprocess.Popen([binary_dir + "/clt", "10", "localhost", str(PORT), "12000"])
+  return subprocess.Popen([binary_dir + "/clt", "10", "localhost", str(PORT), "10000"])
 
 def run_server(binary_dir: str) -> int:
   """

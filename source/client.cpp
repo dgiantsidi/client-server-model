@@ -107,7 +107,7 @@ public:
     memcpy(buf.get() + length_size_field, msg_str.data(), msg_size);
     return {msg_size + length_size_field, std::move(buf)};
   }
-  auto get_operation(std::vector<::Workload::TraceCmd>::iterator& it)
+  auto get_operation(std::vector<::Workload::TraceCmd>::iterator & it)
       -> std::tuple<size_t, std::unique_ptr<char[]>, int> {
 #if 0
     auto i = number_of_iterations.fetch_add(1ULL, std::memory_order_relaxed);
@@ -148,8 +148,7 @@ public:
 
     if (it != traces.end()) {
       it++;
-    }
-    else {
+    } else {
       it = traces.begin() + nb_messages / nb_clients * (rand() % nb_clients);
     }
 
