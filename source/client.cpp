@@ -107,7 +107,7 @@ public:
     memcpy(buf.get() + length_size_field, msg_str.data(), msg_size);
     return {msg_size + length_size_field, std::move(buf)};
   }
-  auto get_operation(std::vector<::Workload::TraceCmd>::iterator & it)
+  auto get_operation(std::vector<::Workload::TraceCmd>::iterator& it)
       -> std::tuple<size_t, std::unique_ptr<char[]>, int> {
 #if 0
     auto i = number_of_iterations.fetch_add(1ULL, std::memory_order_relaxed);
@@ -129,7 +129,7 @@ public:
     }();
 #endif
     auto j = 1;
-    auto operation_func = [&it] {
+    auto operation_func = [it] {
       //	fmt::print("[{}]: {} {}\n", __func__, it->op, it->key_hash);
       if (it->op == Workload::TraceCmd::put) {
         return &ClientOP::get_operation_put;
@@ -146,11 +146,12 @@ public:
       (this->*operation_func)(operation_data, it);
     }
 
-    if (it != traces.end())
+    if (it != traces.end()) {
       it++;
-
-    else
+    }
+    else {
       it = traces.begin() + nb_messages / nb_clients * (rand() % nb_clients);
+    }
 
     std::string msg_str;
     msg.SerializeToString(&msg_str);
