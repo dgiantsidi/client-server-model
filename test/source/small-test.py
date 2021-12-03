@@ -13,7 +13,7 @@ PORT=31850
 
 parameters = ["--hostname", "localhost",
 "--port", str(PORT),
-"--n_messages", "20000",
+"--n_messages", "12000",
 "--c_threads", "10",
 "--s_threads", "4",
 "--one_run", "true",
