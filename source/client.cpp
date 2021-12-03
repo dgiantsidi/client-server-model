@@ -216,7 +216,7 @@ void client(ClientOP * client_op, int port, int nb_messages) {
 auto main(int args, char * argv[]) -> int {
   // initialize workload
   std::string file =
-      "/home/dimitra/workspace/client-server-model/source/workload_traces/"
+      "../../source/workload_traces/"
       "12K_traces.txt";
   // reserve space for the vector --
   traces.reserve(1000000);
