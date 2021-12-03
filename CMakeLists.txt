@@ -63,7 +63,6 @@ add_library(
     shared_lib OBJECT
     source/shared.cpp
     source/hostip.cpp
-    source/workload_traces/generate_traces.cpp
 )
 
 target_compile_features(shared_lib PUBLIC cxx_std_20)
@@ -75,6 +74,13 @@ add_library(
 )
 
 target_compile_features(svr_lib PUBLIC cxx_std_20)
+
+add_library(
+    clt_lib OBJECT
+    source/workload_traces/generate_traces.cpp 
+)
+
+target_compile_features(clt_lib PUBLIC cxx_std_20)
 
 # ---- Declare executables ----
 
@@ -113,6 +119,7 @@ target_link_libraries(clt
     PRIVATE
     clt-svr-proto_lib
     shared_lib
+    clt_lib
     ${Protobuf_LIBRARIES}
     fmt::fmt
     Threads::Threads)
