@@ -17,7 +17,8 @@ struct TraceCmd {
   static constexpr size_t key_size = sizeof(uint32_t);
 
   std::function<void(TraceCmd & cmd)> inner_call;
-  uint8_t key_hash[key_size];
+  // uint8_t key_hash[key_size];
+  uint32_t key_hash;
 
   void call() { inner_call(*this); }
 

@@ -64,7 +64,8 @@ auto manufacture_trace(uint16_t unused /* unused */,
 
 void TraceCmd::init(uint32_t key_id, int read_permille) {
   op = (rand() % 1000) < read_permille ? get : put;
-  memcpy(key_hash, &key_id, sizeof(key_id));
+  // memcpy(key_hash, &key_id, sizeof(key_id));
+  key_hash = key_id;
 }
 
 TraceCmd::TraceCmd(uint32_t key_id, int read_permille) {

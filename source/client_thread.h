@@ -115,14 +115,22 @@ public:
     }
   }
 
-  void recv_ack() {
+  auto recv_ack() -> std::pair<int, std::unique_ptr<char[]>> {
     auto [bytecount, buffer] = secure_recv(rep_fd);
     if (buffer == nullptr) {
       fmt::print("ERROR\n");
       // NOLINTNEXTLINE(concurrency-mt-unsafe)
       exit(2);
     }
+    if (bytecount == 0) {
+      fmt::print("ERROR\n");
+      // NOLINTNEXTLINE(concurrency-mt-unsafe)
+      exit(2);
+    }
+
     replies++;
+    // fmt::print("[{}] {} {}\n", __func__, bytecount, buffer.get());
+    return {bytecount, std::move(buffer)};
   }
 
   ClientThread() = delete;

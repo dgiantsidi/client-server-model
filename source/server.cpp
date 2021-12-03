@@ -27,6 +27,7 @@ auto construct_reply(int op_id, int success, int txn_id, std::string_view val)
   rep.set_success(success);
   rep.set_txn_id(txn_id);
   rep.set_value(val.data(), val.size());
+  // fmt::print("{} value={}\n", __func__, rep.value());
 
   std::string msg_str;
   rep.SerializeToString(&msg_str);
@@ -41,6 +42,7 @@ void process_put(KvStore & db,
                  ServerThread * args,
                  sockets::client_msg::OperationData const & op,
                  int fd) {
+  // fmt::print("{} key={}, value={}\n", __func__, op.key(), op.value());
   auto success = db.put(op.key(), op.value());
 
   auto rep_ptr = construct_reply(
@@ -56,11 +58,13 @@ void process_get(KvStore const & db,
 
   auto rep_ptr = [&ret_val, &op]() {
     if (!ret_val) {
-      fmt::print("Key: [] not found\n", op.key());
+      fmt::print("Key: {} not found\n", op.key());
       return construct_reply(op.op_id(), 0, -1, "");
     }
+    //    fmt::print("{} key={}, value={}\n", __func__, op.key(), *ret_val);
     return construct_reply(op.op_id(), 1, -1, *ret_val);
   }();
+
   args->enqueue_reply(fd, std::move(rep_ptr));
 }
 
