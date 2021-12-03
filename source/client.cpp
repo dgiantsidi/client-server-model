@@ -146,7 +146,7 @@ public:
       (this->*operation_func)(operation_data, it);
     }
 
-    if (it != traces.end()) {
+    if (it != (traces.end()-1)) {
       it++;
     } else {
       it = traces.begin() + nb_messages / nb_clients * (rand() % nb_clients);
