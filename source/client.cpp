@@ -166,6 +166,8 @@ public:
   void verify(int key, const char * ret_val, size_t bytecount) {
     auto expected_val = local_kv->get(key);
     if (expected_val->data() == nullptr) {
+      if (bytecount != 0)
+        exit(8);
       return;
     }
     if (::memcmp(ret_val, expected_val->data(), bytecount) != 0) {
