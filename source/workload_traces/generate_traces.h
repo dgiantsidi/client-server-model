@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <functional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace Workload {
@@ -15,15 +16,12 @@ struct TraceCmd {
   } __attribute__((aligned(64))) op;
 
   static constexpr size_t key_size = sizeof(uint32_t);
+  uint8_t key_hash[key_size];
 
-  std::function<void(TraceCmd & cmd)> inner_call;
-  // uint8_t key_hash[key_size];
-  uint32_t key_hash;
-
-  void call() { inner_call(*this); }
 
   explicit TraceCmd(uint32_t key_id, int read_permille = default_read_permille);
   explicit TraceCmd(std::string const & s, int read_permille);
+  explicit TraceCmd(std::string_view s, int read_permille);
 
 private:
   void init(uint32_t key_id, int read_permille);

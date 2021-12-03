@@ -1,51 +1,96 @@
+#include <charconv>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <sstream>
+#include <string_view>
 
 #include "generate_traces.h"
+
+#include <fcntl.h>
+#include <fmt/format.h>
+#include <sys/mman.h>
+#include <unistd.h>
 
 namespace Workload {
 namespace {
 
-auto split(std::string const & s, char delimiter) -> std::vector<std::string> {
-  std::vector<std::string> tokens;
-  std::string token;
-  std::istringstream token_stream(s);
-  while (std::getline(token_stream, token, delimiter)) {
-    tokens.push_back(token);
+struct FD {
+  int fd;
+  operator int() const noexcept { return fd; }
+  explicit FD(int fd)
+      : fd(fd) {}
+  FD(FD && other)
+  noexcept
+      : fd(other.fd) {
+    other.fd = -1;
+  }
+  ~FD() {
+    if (fd >= 0) {
+      ::close(fd);
+    }
+  }
+};
+
+struct Unmap {
+  size_t size;
+  inline Unmap() = default;
+  inline Unmap(size_t size)
+      : size(size) {}
+  inline Unmap(Unmap && other) noexcept
+      : size(other.size) {
+    other.size = 0;
+  }
+  inline auto operator=(Unmap && other) noexcept -> Unmap & {
+    size = other.size;
+    other.size = 0;
+    return *this;
+  }
+  inline auto operator()(char const * ptr) -> void {
+    if (size && ptr) {
+      ::munmap(const_cast<char *>(ptr), size);
+    }
+  }
+};
+
+auto split(std::string_view str, std::string_view delims)
+    -> std::vector<TraceCmd> {
+  std::vector<TraceCmd> tokens;
+  for (auto first = str.data(), second = str.data(), last = first + str.size();
+       second != last;
+       first = second + 1) {
+    second =
+        std::find_first_of(first, last, std::cbegin(delims), std::cend(delims));
+    if (first != second) {
+      tokens.emplace_back(std::string_view(first, second - first),
+                          default_read_permille);
+    }
   }
   return tokens;
 }
 
-auto parse_trace(uint16_t unused /* unused */,
+auto parse_trace(uint16_t /* unused */,
                  const std::string & path,
                  int read_permille) -> std::vector<TraceCmd> {
-  std::ifstream file(path);
-  if (!file) {
+  FD fd(open(path.c_str(), O_RDONLY | O_CLOEXEC));
+  if (fd < 0) {
+    fmt::print(stderr, "Failed to open trace file: {}\n", path);
     return {};
   }
-
-  std::vector<TraceCmd> res;
-  res.reserve(1000000);
-  std::string line;
-  while (std::getline(file, line)) {
-    if (line.length() == 0) {
-      continue;
-    }
-
-    if (line[line.length() - 1] == '\n') {
-      line[line.length() - 1] = 0;
-    }
-
-    auto elements = split(line, ' ');
-    if (elements.empty()) {
-      continue;
-    }
-    res.emplace_back(elements[0], read_permille);
+  Unmap size(lseek(fd, 0, SEEK_END));
+  auto tmp_size = size.size;
+  std::unique_ptr<char const, Unmap> ptr(
+      static_cast<char *>(
+          ::mmap(nullptr, tmp_size, PROT_READ, MAP_PRIVATE, fd, 0)),
+      std::move(size));
+  if (ptr.get() == MAP_FAILED) {
+    fmt::print(stderr, "Failed to mmap trace file: {}\n", path);
+    return {};
   }
-  return res;
+  std::string_view content(ptr.get(), tmp_size);
+  return split(content, "\n");
 }
 
 auto manufacture_trace(uint16_t unused /* unused */,
@@ -76,12 +121,18 @@ TraceCmd::TraceCmd(std::string const & s, int read_permille) {
   init(static_cast<uint32_t>(strtoul(s.c_str(), nullptr, 10)), read_permille);
 }
 
-auto trace_init(uint16_t t_id, const std::string & path)
+TraceCmd::TraceCmd(std::string_view s, int read_permille) {
+  uint32_t result;
+  std::from_chars(s.data(), s.data() + s.size(), result);
+  init(result, read_permille);
+}
+
+auto trace_init(uint16_t t_id, std::string const & path)
     -> std::vector<TraceCmd> {
   return parse_trace(t_id, path, default_read_permille);
 }
 
-auto trace_init(const std::string & file_path, int read_permile)
+auto trace_init(std::string const & file_path, int read_permile)
     -> std::vector<TraceCmd> {
   return parse_trace(0, file_path, read_permile);
 }

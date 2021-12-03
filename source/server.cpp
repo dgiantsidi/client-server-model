@@ -127,6 +127,7 @@ static void processing_func(KvStore & db, ServerThread * args) {
             },
             [args, func_name](ServerThread::Timeout /*timeout*/) -> bool {
               if (args->should_exit.load(std::memory_order_relaxed)) {
+                // FIXME: I am not sure that this is necessary here.
                 std::atomic_thread_fence(std::memory_order_acquire);
                 return false;
               }
