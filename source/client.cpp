@@ -170,6 +170,7 @@ public:
                  key,
                  ret_val,
                  expected_val->data());
+      exit(1);
     } else {
       // fmt::print("[{}] all good\n", __func__);
     }
