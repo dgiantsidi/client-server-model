@@ -13,11 +13,11 @@ struct TraceCmd {
   {
     put,
     get
-  } __attribute__((aligned(64))) op;
+  } op;
 
   static constexpr size_t key_size = sizeof(uint32_t);
-  uint8_t key_hash[key_size];
-
+  // uint8_t key_hash[key_size];
+  uint32_t key_hash;
 
   explicit TraceCmd(uint32_t key_id, int read_permille = default_read_permille);
   explicit TraceCmd(std::string const & s, int read_permille);

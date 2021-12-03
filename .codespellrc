@@ -2,5 +2,5 @@
 builtin = clear,rare,en-GB_to_en-US,names,informal,code
 check-filenames =
 check-hidden =
-skip = */.git,*/build,*/.ccls-cache,*/.mypy_cache
+skip = */.git,*/build,*/.ccls-cache,*/.mypy_cache,*/extern
 quiet-level = 2

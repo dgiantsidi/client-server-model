@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <arpa/inet.h>
+#include <cxxopts.hpp>
 #include <fcntl.h>
 #include <fmt/format.h>
 #include <netinet/in.h>
@@ -142,26 +143,57 @@ static void processing_func(KvStore & db, ServerThread * args) {
   }
 }
 
-auto main(int args, char * argv[]) -> int {
+auto main(int argc, char * argv[]) -> int {
   KvStore db;
-  constexpr auto n_expected_args = 3;
-  if (args < n_expected_args) {
-    fmt::print(stderr, "{}\n", usage);
-    return 1;
+  cxxopts::Options options("svr", "Example server for the sockets benchmark");
+  options.allow_unrecognised_options().add_options()(
+      "n,s_threads", "Number of threads", cxxopts::value<size_t>())(
+      "s,hostname", "Hostname of the server", cxxopts::value<std::string>())(
+      "p,port", "Port of the server", cxxopts::value<size_t>())(
+      "o,one_run", "Run only one time", cxxopts::value<bool>())(
+      "c,c_threads",
+      "Number of clients",
+      cxxopts::value<size_t>()->default_value("0"))("h,help", "Print help");
+
+  auto args = options.parse(argc, argv);
+
+  if (args.count("help")) {
+    fmt::print("{}\n", options.help());
+    return 0;
   }
 
-  auto const nb_server_threads = std::stoull(argv[1]);
+  if (!args.count("s_threads")) {
+    fmt::print(stderr,
+               "The number of threads n_threads is required\n{}\n",
+               options.help());
+    return -1;
+  }
+
+  if (!args.count("hostname")) {
+    fmt::print(stderr, "The hostname is required\n{}\n", options.help());
+    return -1;
+  }
+
+  if (!args.count("port")) {
+    fmt::print(stderr, "The port is required\n{}\n", options.help());
+    return -1;
+  }
+
+  if (!args.count("c_threads")) {
+    fmt::print(
+        stderr, "The number of clients is required\n{}\n", options.help());
+    return -1;
+  }
+
+  auto const nb_server_threads = args["s_threads"].as<size_t>();
   if (nb_server_threads == 0) {
     fmt::print(stderr, "{}\n", usage);
     return 1;
   }
-  auto port = std::stoull(argv[2]);
+  auto port = args["port"].as<size_t>();
 
-  auto one_run = std::stoull(argv[4]);
-  auto total_clients = 0ULL;
-  if (one_run) {
-    total_clients = std::stoull(argv[5]);
-  }
+  auto one_run = args["one_run"].as<bool>();
+  auto total_clients = args["c_threads"].as<size_t>();
 
   std::vector<ServerThread> server_threads;
   server_threads.reserve(nb_server_threads);

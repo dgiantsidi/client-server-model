@@ -15,6 +15,7 @@
 #include <vector>
 
 #include <arpa/inet.h>
+#include <cxxopts.hpp>
 #include <fcntl.h>
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
@@ -146,7 +147,7 @@ public:
       (this->*operation_func)(operation_data, it);
     }
 
-    if (it != (traces.end()-1)) {
+    if (it != (traces.end() - 1)) {
       it++;
     } else {
       it = traces.begin() + nb_messages / nb_clients * (rand() % nb_clients);
@@ -220,30 +221,68 @@ void client(ClientOP * client_op, int port, int nb_messages) {
   }
 }
 
-auto main(int args, char * argv[]) -> int {
-  // initialize workload
-  std::string file =
-      "workload_traces/12K_traces.txt";
-  // reserve space for the vector --
-  traces.reserve(1000000);
-  traces = ::Workload::trace_init(file, gets_per_mille);
-  if (traces.size() == 0) {
-    fmt::print("workload empty\n");
+auto main(int argc, char * argv[]) -> int {
+  cxxopts::Options options(argv[0], "Client for the sockets benchmark");
+  options.allow_unrecognised_options().add_options()(
+      "c,c_threads",
+      "Number of threads the client should use",
+      cxxopts::value<size_t>())(
+      "s,hostname", "Hostname of the server", cxxopts::value<std::string>())(
+      "p,port", "Port of the server", cxxopts::value<size_t>())(
+      "m,n_messages",
+      "Number of messages to send to the server",
+      cxxopts::value<size_t>())(
+      "t,trace", "Trace file to use", cxxopts::value<std::string>())(
+      "h,help", "Print help");
+  //  ("positional", "Positional argument",
+  //  cxxopts::value<std::vector<std::string>>());
+  // options.parse_positional({"n_threads", "hostname", "port", "n_messages",
+  // "trace", "positional"});
+
+  auto args = options.parse(argc, argv);
+  if (args.count("help")) {
+    fmt::print("{}\n", options.help());
+    return 0;
   }
+
+  if (!args.count("c_threads")) {
+    fmt::print(stderr,
+               "The number of threads n_threads is required\n{}\n",
+               options.help());
+    return 1;
+  }
+
+  if (!args.count("hostname")) {
+    fmt::print(stderr, "The hostname is required\n{}\n", options.help());
+    return 1;
+  }
+
+  if (!args.count("port")) {
+    fmt::print(stderr, "The port is required\n{}\n", options.help());
+    return 1;
+  }
+
+  if (!args.count("n_messages")) {
+    fmt::print(
+        stderr, "The number of messages is required\n{}\n", options.help());
+    return 1;
+  }
+
+  if (!args.count("trace")) {
+    fmt::print(stderr, "The trace file is required\n{}\n", options.help());
+    return 1;
+  }
+
+  // initialize workload
+  traces =
+      ::Workload::trace_init(args["trace"].as<std::string>(), gets_per_mille);
 
   // NOLINTNEXTLINE(concurrency-mt-unsafe)
   hostip = gethostbyname("localhost");
-  constexpr auto n_expected_args = 5;
-  if (args < n_expected_args) {
-    fmt::print(
-        stderr,
-        "usage: ./client <nb_threads> <hostname> <port> <nb_messages>\n");
-    return -1;
-  }
 
-  nb_clients = std::stoull(argv[1]);
-  auto port = std::stoull(argv[3]);
-  nb_messages = std::stoull(argv[4]);
+  auto nb_clients = args["c_threads"].as<size_t>();
+  auto port = args["port"].as<size_t>();
+  auto nb_messages = args["n_messages"].as<size_t>();
 
   // creating the client threads
   std::vector<std::thread> threads;

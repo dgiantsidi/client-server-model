@@ -27,6 +27,7 @@ find_package(fmt REQUIRED)
 
 include_directories(SYSTEM ${Protobuf_INCLUDE_DIRS})
 include_directories(SYSTEM ${CMAKE_CURRENT_BINARY_DIR})
+include_directories(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/extern/include)
 protobuf_generate_cpp(PROTO_SRCS_CLIENT PROTO_HDRS_CLIENT source/client_message.proto)
 protobuf_generate_cpp(PROTO_SRCS_SERVER PROTO_HDRS_SERVER source/server_message.proto)
 
