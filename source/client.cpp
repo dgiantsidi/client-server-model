@@ -165,6 +165,9 @@ public:
 
   void verify(int key, const char * ret_val, size_t bytecount) {
     auto expected_val = local_kv->get(key);
+    if (expected_val->data() == nullptr) {
+      return;
+    }
     if (::memcmp(ret_val, expected_val->data(), bytecount) != 0) {
       fmt::print("[{}] ERROR on key={} {} != {}\n",
                  __func__,
@@ -190,7 +193,7 @@ void client(ClientOP * client_op, int port, int nb_messages) {
   auto expected_replies = 0;
   auto step = nb_messages / nb_clients;
   auto it = traces.begin() + step * id;
-  fmt::print("{} - {}\n", step * id, step * id + step);
+  fmt::print("{} {} - {}\n", step, step * id, step * id + step);
   for (auto i = 0; i < step; ++i) {
     auto [size, buf, num] = client_op->get_operation(it);
     expected_replies += num;
@@ -280,9 +283,9 @@ auto main(int argc, char * argv[]) -> int {
   // NOLINTNEXTLINE(concurrency-mt-unsafe)
   hostip = gethostbyname("localhost");
 
-  auto nb_clients = args["c_threads"].as<size_t>();
+  nb_clients = args["c_threads"].as<size_t>();
   auto port = args["port"].as<size_t>();
-  auto nb_messages = args["n_messages"].as<size_t>();
+  nb_messages = args["n_messages"].as<size_t>();
 
   // creating the client threads
   std::vector<std::thread> threads;

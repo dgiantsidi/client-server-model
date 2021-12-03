@@ -14,7 +14,6 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "callback.h"
 #include "message.h"
 #include "shared.h"
 
