@@ -7,7 +7,7 @@ stdenv.mkDerivation {
   
   buildInputs = [
     codespell
-    (clang-tools.override { llvmPackages = llvmPackages_12; })
+    clang-tools
     cppcheck
     bashInteractive
     cmake
