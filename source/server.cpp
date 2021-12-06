@@ -69,21 +69,38 @@ void process_get(KvStore const & db,
   args->enqueue_reply(fd, std::move(rep_ptr));
 }
 
-void process_txn(const sockets::client_msg::OperationData & op, int /*fd*/) {
+void process_tx(KvStore & db,
+                ServerThread * args,
+                sockets::client_msg::OperationData const & op,
+                int fd) {
   switch (op.type()) {
     case sockets::client_msg::TXN_START: {
+      fmt::print("{} tx_start w/ id={}\n", __func__, op.txn_id());
+      auto success = db.tx_start(op.txn_id());
       break;
     }
     case sockets::client_msg::TXN_COMMIT: {
+      fmt::print("{} tx_commit w/ id={}\n", __func__, op.txn_id());
+      auto success = db.tx_commit(op.txn_id());
       break;
     }
     case sockets::client_msg::TXN_ABORT: {
+      fmt::print("{} tx_abort w/ id={}\n", __func__, op.txn_id());
+      auto success = db.tx_abort(op.txn_id());
       break;
     }
     case sockets::client_msg::TXN_GET: {
+      fmt::print("{} tx_get w/ id={}\n", __func__, op.txn_id());
+      auto ret_vla = db.tx_get(op.txn_id(), op.key());
       break;
     }
     case sockets::client_msg::TXN_PUT: {
+      fmt::print(
+          "{} tx_put w/ id={} key={}\n", __func__, op.txn_id(), op.key());
+      auto success = db.tx_put(op.txn_id(), op.key(), op.value());
+      auto rep_ptr =
+          construct_reply(op.op_id(), success, op.txn_id(), "" /* empty val */);
+      args->enqueue_reply(fd, std::move(rep_ptr));
       break;
     }
     default: {
@@ -97,17 +114,28 @@ void process_txn(const sockets::client_msg::OperationData & op, int /*fd*/) {
 static void processing_func(KvStore & db, ServerThread * args) {
   auto constexpr func_name = __func__;
   args->init();
-  args->register_callback(sockets::client_msg::TXN_START, process_txn);
   args->register_callback(
       sockets::client_msg::PUT,
       [&db, args](auto const & op, int fd) { process_put(db, args, op, fd); });
   args->register_callback(
       sockets::client_msg::GET,
       [&db, args](auto const & op, int fd) { process_get(db, args, op, fd); });
-  args->register_callback(sockets::client_msg::TXN_PUT, process_txn);
-  args->register_callback(sockets::client_msg::TXN_GET, process_txn);
-  args->register_callback(sockets::client_msg::TXN_COMMIT, process_txn);
-  args->register_callback(sockets::client_msg::TXN_ABORT, process_txn);
+  args->register_callback(
+      sockets::client_msg::TXN_START,
+      [&db, args](auto const & op, int fd) { process_tx(db, args, op, fd); });
+  args->register_callback(
+      sockets::client_msg::TXN_GET,
+      [&db, args](auto const & op, int fd) { process_tx(db, args, op, fd); });
+  args->register_callback(
+      sockets::client_msg::TXN_PUT,
+      [&db, args](auto const & op, int fd) { process_tx(db, args, op, fd); });
+  args->register_callback(
+      sockets::client_msg::TXN_COMMIT,
+      [&db, args](auto const & op, int fd) { process_tx(db, args, op, fd); });
+  args->register_callback(
+      sockets::client_msg::TXN_ABORT,
+      [&db, args](auto const & op, int fd) { process_tx(db, args, op, fd); });
+
   for (bool should_continue = true; should_continue;) {
     auto ret = args->incomming_requests();
 

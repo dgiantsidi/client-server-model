@@ -74,6 +74,8 @@ auto secure_recv(int fd) -> std::pair<size_t, std::unique_ptr<char[]>> {
     return {0, nullptr};
   }
 
+  if (actual_msg_size == 0)
+	  debug_print("[{}] wrong .. {} bytes\n", __func__, actual_msg_size);
   return {actual_msg_size, std::move(buf)};
 }
 

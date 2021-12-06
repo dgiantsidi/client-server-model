@@ -55,17 +55,47 @@ struct Unmap {
   }
 };
 
-auto split(std::string_view str, std::string_view delims)
-    -> std::vector<TraceCmd> {
+auto split(std::string_view str,
+           std::string_view delims,
+           int is_tx,
+           int ops_per_tx) -> std::vector<TraceCmd> {
   std::vector<TraceCmd> tokens;
   for (auto first = str.data(), second = str.data(), last = first + str.size();
        second != last;
        first = second + 1) {
     second =
         std::find_first_of(first, last, std::cbegin(delims), std::cend(delims));
-    if (first != second) {
-      tokens.emplace_back(std::string_view(first, second - first),
-                          default_read_permille);
+    if (!is_tx) {
+      if (first != second) {
+        tokens.emplace_back(std::string_view(first, second - first),
+                            default_read_permille);
+      }
+    } else {
+      // it is tx so
+      fmt::print("tx start .... \n");
+      std::vector<TraceCmd::KvPair> txs;
+      for (size_t tx_op = 0; tx_op < ops_per_tx; tx_op++) {
+        if (first != second) {
+          auto str = std::string_view(first, second - first);
+
+          first = second + 1;
+          second = std::find_first_of(
+              first, last, std::cbegin(delims), std::cend(delims));
+          txs.emplace_back(TraceCmd::KvPair {
+              .key_hash =
+                  static_cast<uint32_t>(strtoul(str.data(), nullptr, 10)),
+              .value = "1",
+              .op = TraceCmd::txn_put});
+           fmt::print("{} \n", str);
+          if (second == last) {
+            tokens.emplace_back(txs);
+            break;
+          }
+        }
+      }
+      fmt::print("tx end .... \n");
+      if (!txs.empty())
+      	tokens.emplace_back(txs);
     }
   }
   return tokens;
@@ -90,7 +120,7 @@ auto parse_trace(uint16_t /* unused */,
     return {};
   }
   std::string_view content(ptr.get(), tmp_size);
-  return split(content, "\n");
+  return split(content, "\n", true, 2);
 }
 
 auto manufacture_trace(uint16_t unused /* unused */,
@@ -108,11 +138,15 @@ auto manufacture_trace(uint16_t unused /* unused */,
 }  // namespace
 
 void TraceCmd::init(uint32_t key_id, int read_permille) {
-  op = (rand() % 1000) < read_permille ? get : put;
+  auto op = (rand() % 1000) < read_permille ? get : put;
   // memcpy(key_hash, &key_id, sizeof(key_id));
-  key_hash = key_id;
+  //  key_hash = key_id;
+  operation.emplace_back(KvPair {.key_hash = key_id, .value = "1", .op = op});
 }
 
+TraceCmd::TraceCmd(std::vector<KvPair> other) {
+  operation = other;
+}
 TraceCmd::TraceCmd(uint32_t key_id, int read_permille) {
   init(key_id, read_permille);
 }
@@ -145,5 +179,9 @@ auto trace_init(uint16_t t_id,
   srand(rand_start);
   return manufacture_trace(t_id, trace_size, nb_keys, read_permille);
 }
+
+auto transaction_trace_init(std::string const & file_path,
+                            int ops_per_txn,
+                            int reads_per_txn) -> std::vector<TraceCmd> {}
 
 }  // namespace Workload

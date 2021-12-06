@@ -54,16 +54,18 @@ class ClientOP {
 
   void get_operation_put(sockets::client_msg::OperationData * operation_data,
                          std::vector<::Workload::TraceCmd>::iterator it) {
-    operation_data->set_key(it->key_hash);
+    auto item = it->operation[0];
+    operation_data->set_key(item.key_hash);
     global_number.fetch_add(1, std::memory_order_relaxed);
     operation_data->set_type(sockets::client_msg::PUT);
     operation_data->set_value(random_string);
-    local_kv->put(it->key_hash, random_string);
+    local_kv->put(item.key_hash, random_string);
   }
 
   void get_operation_get(sockets::client_msg::OperationData * operation_data,
                          std::vector<::Workload::TraceCmd>::iterator it) {
-    operation_data->set_key(it->key_hash);
+    auto item = it->operation[0];
+    operation_data->set_key(item.key_hash);
     global_number.fetch_sub(1, std::memory_order_relaxed);
     operation_data->set_type(sockets::client_msg::GET);
   }
@@ -108,44 +110,78 @@ public:
     memcpy(buf.get() + length_size_field, msg_str.data(), msg_size);
     return {msg_size + length_size_field, std::move(buf)};
   }
+
+  auto get_type(int op) {
+    if (op == ::Workload::TraceCmd::txn_start) {
+      return sockets::client_msg::TXN_START;
+    }
+    if (op == ::Workload::TraceCmd::txn_put) {
+      return sockets::client_msg::TXN_PUT;
+    }
+    if (op == ::Workload::TraceCmd::txn_get) {
+      return sockets::client_msg::TXN_GET;
+    }
+    if (op == ::Workload::TraceCmd::txn_commit) {
+      return sockets::client_msg::TXN_COMMIT;
+    }
+    if (op == ::Workload::TraceCmd::txn_rollback) {
+      return sockets::client_msg::TXN_ABORT;
+    }
+  }
+
+  auto get_tx(std::vector<::Workload::TraceCmd>::iterator & it)
+      -> std::tuple<size_t, std::unique_ptr<char[]>, int> {
+    // todo::@dimitra
+    static int tx_ids = 0;
+
+    sockets::client_msg msg;
+    auto op_nb = 0;
+    for (auto & op : it->operation) {
+      auto * operation_data = msg.add_ops();
+      operation_data->set_txn_id(tx_ids);
+      operation_data->set_op_id(op_nb++);
+      operation_data->set_key(op.key_hash);
+      operation_data->set_value(op.value);
+      operation_data->set_type(get_type(op.op));
+    }
+    tx_ids++;
+    if (it != (traces.end() - 1)) {
+      it++;
+    } else {
+      it = traces.begin() + nb_messages / nb_clients * (rand() % nb_clients);
+    }
+
+    std::string msg_str;
+    msg.SerializeToString(&msg_str);
+
+    auto msg_size = msg_str.size();
+    if (msg_size == 0) {
+	    fmt::print("{} malakia\n", __func__);
+	    std::cout << msg.DebugString() << "\n";
+	    sleep(2);
+    }
+    auto buf = std::make_unique<char[]>(msg_size + length_size_field);
+    convert_int_to_byte_array(buf.get(), msg_size);
+    memcpy(buf.get() + length_size_field, msg_str.data(), msg_size);
+    return {msg_size + length_size_field, std::move(buf), op_nb};
+  }
+
   auto get_operation(std::vector<::Workload::TraceCmd>::iterator & it)
       -> std::tuple<size_t, std::unique_ptr<char[]>, int> {
-#if 0
-    auto i = number_of_iterations.fetch_add(1ULL, std::memory_order_relaxed);
-    auto j = get_number_of_requests();
-
-    // We could move the switch into the loop and make the code somewhat
-    // simpler, however we would rely on the compiler to optimize the code
-    auto operation_func = [i] {
-      switch (i % 3) {
-        case 0:
-          return &ClientOP::get_operation_put;
-        case 1:
-          return &ClientOP::get_operation_get;
-        case 2:
-          return &ClientOP::get_operation_txn_start;
-        default:
-          throw std::runtime_error("Unknown operation");
-      }
-    }();
-#endif
-    auto j = 1;
     auto operation_func = [it] {
       //	fmt::print("[{}]: {} {}\n", __func__, it->op, it->key_hash);
-      if (it->op == Workload::TraceCmd::put) {
+      if (it->operation[0].op == Workload::TraceCmd::put) {
         return &ClientOP::get_operation_put;
       }
-      if (it->op == Workload::TraceCmd::get) {
+      if (it->operation[0].op == Workload::TraceCmd::get) {
         return &ClientOP::get_operation_get;
       }
     }();
 
     sockets::client_msg msg;
 
-    for (auto k = 0ULL; k < j; ++k) {
-      auto * operation_data = msg.add_ops();
-      (this->*operation_func)(operation_data, it);
-    }
+    auto * operation_data = msg.add_ops();
+    (this->*operation_func)(operation_data, it);
 
     if (it != (traces.end() - 1)) {
       it++;
@@ -160,7 +196,7 @@ public:
     auto buf = std::make_unique<char[]>(msg_size + length_size_field);
     convert_int_to_byte_array(buf.get(), msg_size);
     memcpy(buf.get() + length_size_field, msg_str.data(), msg_size);
-    return {msg_size + length_size_field, std::move(buf), j};
+    return {msg_size + length_size_field, std::move(buf), 1};
   }
 
   void verify(int key, const char * ret_val, size_t bytecount) {
@@ -197,33 +233,40 @@ void client(ClientOP * client_op, int port, int nb_messages) {
   auto it = traces.begin() + step * id;
   fmt::print("{} {} - {}\n", step, step * id, step * id + step);
   for (auto i = 0; i < step; ++i) {
-    auto [size, buf, num] = client_op->get_operation(it);
+    // auto [size, buf, num] = client_op->get_operation(it);
+    auto [size, buf, num] = client_op->get_tx(it);
     expected_replies += num;
     c_thread.sent_request(buf.get(), size);
     c_thread.recv_ack();
   }
 
   while (c_thread.replies != expected_replies) {
+    // fmt::print("received replies={}\n", c_thread.replies);
     c_thread.recv_ack();
   }
 
+#if 0
   // verify
   it = traces.begin() + step * id;
   for (auto i = 0; i < step; i++) {
-    auto [size, buf] = client_op->get_key(it->key_hash);
-    c_thread.sent_request(buf.get(), size);
-    auto [bytecount, result] = c_thread.recv_ack();
+    auto ops = it->operation;
+    for (auto & item : ops) {
+      auto [size, buf] = client_op->get_key(item.key_hash);
+      c_thread.sent_request(buf.get(), size);
+      auto [bytecount, result] = c_thread.recv_ack();
 
-    server::server_response::reply msg;
-    auto payload_sz = bytecount;
-    std::string tmp(result.get(), payload_sz);
-    msg.ParseFromString(tmp);
-    // fmt::print("{} recv={} and {}\n", __func__, msg.value().size(),
-    // msg.value());
+      server::server_response::reply msg;
+      auto payload_sz = bytecount;
+      std::string tmp(result.get(), payload_sz);
+      msg.ParseFromString(tmp);
+      // fmt::print("{} recv={} and {}\n", __func__, msg.value().size(),
+      // msg.value());
 
-    client_op->verify(it->key_hash, msg.value().c_str(), msg.value().size());
-    // fmt::print("{} \n", result.get());
+      client_op->verify(item.key_hash, msg.value().c_str(), msg.value().size());
+      // fmt::print("{} \n", result.get());
+    }
   }
+#endif
 }
 
 auto main(int argc, char * argv[]) -> int {
@@ -281,6 +324,12 @@ auto main(int argc, char * argv[]) -> int {
   // initialize workload
   traces =
       ::Workload::trace_init(args["trace"].as<std::string>(), gets_per_mille);
+  if (traces.empty()) {
+    fmt::print(stderr, "The trace file is empty\n");
+    return 1;
+  }
+
+
 
   // NOLINTNEXTLINE(concurrency-mt-unsafe)
   hostip = gethostbyname("localhost");

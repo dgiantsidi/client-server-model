@@ -12,14 +12,26 @@ struct TraceCmd {
   enum
   {
     put,
-    get
+    get,
+    txn_start,
+    txn_put,
+    txn_get,
+    txn_commit,
+    txn_rollback
   } op;
 
   static constexpr size_t key_size = sizeof(uint32_t);
   // uint8_t key_hash[key_size];
-  uint32_t key_hash;
+  struct KvPair {
+    uint32_t key_hash;
+    std::string value;
+    int op;
+  };
+
+  std::vector<KvPair> operation;
 
   explicit TraceCmd(uint32_t key_id, int read_permille = default_read_permille);
+  explicit TraceCmd(std::vector<KvPair> other);
   explicit TraceCmd(std::string const & s, int read_permille);
   explicit TraceCmd(std::string_view s, int read_permille);
 
