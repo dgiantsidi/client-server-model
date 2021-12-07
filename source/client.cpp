@@ -160,7 +160,8 @@ public:
     if (it != (traces.end() - 1)) {
       it++;
     } else {
-	 it = traces.begin() + (traces.size() / nb_clients) * (rand() % (nb_clients-1));
+      it = traces.begin()
+          + (traces.size() / nb_clients) * (rand() % (nb_clients - 1));
     }
 
     auto buf = std::make_unique<char[]>(msg_size + length_size_field);
@@ -189,7 +190,8 @@ public:
     if (it != (traces.end() - 1)) {
       it++;
     } else {
-      it = traces.begin() + (traces.size() / nb_clients) * (rand() % (nb_clients-1));
+      it = traces.begin()
+          + (traces.size() / nb_clients) * (rand() % (nb_clients - 1));
     }
 
     std::string msg_str;

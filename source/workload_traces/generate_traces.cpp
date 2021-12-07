@@ -86,8 +86,12 @@ auto split(std::string_view str,
           auto str = std::string_view(first, second - first);
 
           txs.emplace_back(TraceCmd::KvPair {
-              .key_hash =
-                  static_cast<uint32_t>(strtoul(str.data(), nullptr, 10)),
+              .key_hash = [str]() -> uint32_t {
+                uint32_t result;
+                std::from_chars(str.data(), str.data() + str.size(), result);
+                // TODO error handling
+                return result;
+              }(),
               .value = "1",
               .op = TraceCmd::txn_put});
           fmt::print("{} \n", str);
@@ -101,7 +105,7 @@ auto split(std::string_view str,
       if (txs.size() > 1) {
         txs.emplace_back(TraceCmd::KvPair {
             .key_hash = -1, .value = "invalid", .op = TraceCmd::txn_commit});
-        tokens.emplace_back(txs);
+        tokens.emplace_back(std::move(txs));
       }
     }
   }
@@ -158,9 +162,9 @@ void TraceCmd::init(uint32_t key_id, int read_permille) {
   operation.emplace_back(KvPair {.key_hash = key_id, .value = "1", .op = op});
 }
 
-TraceCmd::TraceCmd(std::vector<KvPair> other) {
-  operation = other;
-}
+TraceCmd::TraceCmd(std::vector<KvPair> && operations)
+    : operation(std::move(operations)) {}
+
 TraceCmd::TraceCmd(uint32_t key_id, int read_permille) {
   init(key_id, read_permille);
 }

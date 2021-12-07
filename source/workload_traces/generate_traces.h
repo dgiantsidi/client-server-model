@@ -31,7 +31,7 @@ struct TraceCmd {
   std::vector<KvPair> operation;
 
   explicit TraceCmd(uint32_t key_id, int read_permille = default_read_permille);
-  explicit TraceCmd(std::vector<KvPair> other);
+  explicit TraceCmd(std::vector<KvPair> && operations);
   explicit TraceCmd(std::string const & s, int read_permille);
   explicit TraceCmd(std::string_view s, int read_permille);
 
