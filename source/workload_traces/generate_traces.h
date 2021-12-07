@@ -16,6 +16,7 @@ struct TraceCmd {
     txn_start,
     txn_put,
     txn_get,
+    txn_get_and_execute,
     txn_commit,
     txn_rollback
   } op;

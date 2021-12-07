@@ -111,7 +111,7 @@ public:
     return {msg_size + length_size_field, std::move(buf)};
   }
 
-  auto get_type(int op) {
+  auto get_tx_type(int op) {
     if (op == ::Workload::TraceCmd::txn_start) {
       return sockets::client_msg::TXN_START;
     }
@@ -120,6 +120,9 @@ public:
     }
     if (op == ::Workload::TraceCmd::txn_get) {
       return sockets::client_msg::TXN_GET;
+    }
+    if (op == ::Workload::TraceCmd::txn_get_and_execute) {
+      return sockets::client_msg::TXN_GET_AND_EXECUTE;
     }
     if (op == ::Workload::TraceCmd::txn_commit) {
       return sockets::client_msg::TXN_COMMIT;
@@ -143,15 +146,16 @@ public:
       operation_data->set_op_id(op_nb++);
       operation_data->set_key(op.key_hash);
       operation_data->set_value(op.value);
-      operation_data->set_type(get_type(op.op));
+      operation_data->set_type(get_tx_type(op.op));
     }
+
     tx_ids++;
     std::string msg_str;
     msg.SerializeToString(&msg_str);
 
     auto msg_size = msg_str.size();
     if (msg_size == 0) {
-      fmt::print("{} malakia it->operation.size()={}\n",
+      fmt::print("[{}] ERROR: it->operation.size()={}\n",
                  __func__,
                  it->operation.size());
       std::cout << msg.DebugString() << "\n";

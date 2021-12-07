@@ -75,10 +75,12 @@ void process_tx(KvStore & db,
                 int fd) {
   switch (op.type()) {
     case sockets::client_msg::TXN_START: {
-      fmt::print("{} tx_start w/ id={} client_id={}\n",
-                 __func__,
-                 op.txn_id(),
-                 op.client_id());
+      /*
+fmt::print("{} tx_start w/ id={} client_id={}\n",
+__func__,
+op.txn_id(),
+op.client_id());
+*/
       auto success = db.tx_start(op.txn_id());
       auto rep_ptr =
           construct_reply(op.op_id(), success, op.txn_id(), "" /* empty val */);
@@ -86,10 +88,12 @@ void process_tx(KvStore & db,
       break;
     }
     case sockets::client_msg::TXN_COMMIT: {
-      fmt::print("{} tx_commit w/ id={} client_id={}\n",
-                 __func__,
-                 op.txn_id(),
-                 op.client_id());
+      /*
+fmt::print("{} tx_commit w/ id={} client_id={}\n",
+      __func__,
+      op.txn_id(),
+      op.client_id());
+      */
       auto success = db.tx_commit(op.txn_id());
       auto rep_ptr =
           construct_reply(op.op_id(), success, op.txn_id(), "" /* empty val */);
@@ -97,20 +101,26 @@ void process_tx(KvStore & db,
       break;
     }
     case sockets::client_msg::TXN_ABORT: {
-      fmt::print("{} tx_abort w/ id={}\n", __func__, op.txn_id());
+      /*
+fmt::print("{} tx_abort w/ id={}\n", __func__, op.txn_id());
+      */
       auto success = db.tx_abort(op.txn_id());
       break;
     }
     case sockets::client_msg::TXN_GET: {
-      fmt::print("{} tx_get w/ id={}\n", __func__, op.txn_id());
+      /*
+fmt::print("{} tx_get w/ id={}\n", __func__, op.txn_id());
+*/
       auto [success, ret_val] = db.tx_get(op.txn_id(), op.key());
       auto rep_ptr = construct_reply(op.op_id(), success, op.txn_id(), ret_val);
       args->enqueue_reply(fd, std::move(rep_ptr));
       break;
     }
     case sockets::client_msg::TXN_PUT: {
-      fmt::print(
-          "{} tx_put w/ id={} key={}\n", __func__, op.txn_id(), op.key());
+      /*
+fmt::print(
+"{} tx_put w/ id={} key={}\n", __func__, op.txn_id(), op.key());
+*/
       auto success = db.tx_put(op.txn_id(), op.key(), op.value());
       auto rep_ptr =
           construct_reply(op.op_id(), success, op.txn_id(), "" /* empty val */);

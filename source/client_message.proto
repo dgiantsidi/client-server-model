@@ -9,9 +9,10 @@ message client_msg {
     TXN_START   = 2;
     TXN_PUT     = 3;
     TXN_GET     = 4;
-    TXN_COMMIT  = 5;
-    TXN_ABORT   = 6;
-    INIT        = 7;
+    TXN_GET_AND_EXECUTE     = 5;
+    TXN_COMMIT  = 6;
+    TXN_ABORT   = 7;
+    INIT        = 8;
   }
 
   message OperationData {
