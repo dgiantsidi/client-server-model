@@ -129,7 +129,7 @@ public:
     }
   }
 
-  auto get_tx(std::vector<::Workload::TraceCmd>::iterator & it)
+  auto get_tx(std::vector<::Workload::TraceCmd>::iterator & it, int thread_id)
       -> std::tuple<size_t, std::unique_ptr<char[]>, int> {
     // todo::@dimitra
     static int tx_ids = 0;
@@ -138,6 +138,7 @@ public:
     auto op_nb = 0;
     for (auto & op : it->operation) {
       auto * operation_data = msg.add_ops();
+      operation_data->set_client_id(thread_id);
       operation_data->set_txn_id(tx_ids);
       operation_data->set_op_id(op_nb++);
       operation_data->set_key(op.key_hash);
@@ -145,21 +146,23 @@ public:
       operation_data->set_type(get_type(op.op));
     }
     tx_ids++;
-    if (it != (traces.end() - 1)) {
-      it++;
-    } else {
-      it = traces.begin() + nb_messages / nb_clients * (rand() % nb_clients);
-    }
-
     std::string msg_str;
     msg.SerializeToString(&msg_str);
 
     auto msg_size = msg_str.size();
     if (msg_size == 0) {
-	    fmt::print("{} malakia\n", __func__);
-	    std::cout << msg.DebugString() << "\n";
-	    sleep(2);
+      fmt::print("{} malakia it->operation.size()={}\n",
+                 __func__,
+                 it->operation.size());
+      std::cout << msg.DebugString() << "\n";
+      sleep(2);
     }
+    if (it != (traces.end() - 1)) {
+      it++;
+    } else {
+	 it = traces.begin() + (traces.size() / nb_clients) * (rand() % (nb_clients-1));
+    }
+
     auto buf = std::make_unique<char[]>(msg_size + length_size_field);
     convert_int_to_byte_array(buf.get(), msg_size);
     memcpy(buf.get() + length_size_field, msg_str.data(), msg_size);
@@ -186,7 +189,7 @@ public:
     if (it != (traces.end() - 1)) {
       it++;
     } else {
-      it = traces.begin() + nb_messages / nb_clients * (rand() % nb_clients);
+      it = traces.begin() + (traces.size() / nb_clients) * (rand() % (nb_clients-1));
     }
 
     std::string msg_str;
@@ -229,12 +232,12 @@ void client(ClientOP * client_op, int port, int nb_messages) {
   sleep(2);
 
   auto expected_replies = 0;
-  auto step = nb_messages / nb_clients;
+  auto step = traces.size() / nb_clients;
   auto it = traces.begin() + step * id;
   fmt::print("{} {} - {}\n", step, step * id, step * id + step);
-  for (auto i = 0; i < step; ++i) {
+  for (auto i = 0; i < nb_messages; ++i) {
     // auto [size, buf, num] = client_op->get_operation(it);
-    auto [size, buf, num] = client_op->get_tx(it);
+    auto [size, buf, num] = client_op->get_tx(it, id);
     expected_replies += num;
     c_thread.sent_request(buf.get(), size);
     c_thread.recv_ack();
@@ -328,8 +331,6 @@ auto main(int argc, char * argv[]) -> int {
     fmt::print(stderr, "The trace file is empty\n");
     return 1;
   }
-
-
 
   // NOLINTNEXTLINE(concurrency-mt-unsafe)
   hostip = gethostbyname("localhost");

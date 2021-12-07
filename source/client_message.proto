@@ -20,11 +20,12 @@ message client_msg {
     optional int32 txn_id       = 3;
     optional int32 key          = 4;
     optional string value       = 5;
+  optional int32 client_id      = 6;
 
     /* this is only for the initialization */
-    optional int32 port         = 6;
+    optional int32 port         = 7;
   }
 
-  repeated OperationData ops = 7;
+  repeated OperationData ops = 8;
 
 }

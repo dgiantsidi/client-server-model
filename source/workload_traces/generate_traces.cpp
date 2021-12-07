@@ -63,9 +63,9 @@ auto split(std::string_view str,
   for (auto first = str.data(), second = str.data(), last = first + str.size();
        second != last;
        first = second + 1) {
-    second =
-        std::find_first_of(first, last, std::cbegin(delims), std::cend(delims));
     if (!is_tx) {
+      second = std::find_first_of(
+          first, last, std::cbegin(delims), std::cend(delims));
       if (first != second) {
         tokens.emplace_back(std::string_view(first, second - first),
                             default_read_permille);
@@ -74,29 +74,43 @@ auto split(std::string_view str,
       // it is tx so
       fmt::print("tx start .... \n");
       std::vector<TraceCmd::KvPair> txs;
+      txs.emplace_back(TraceCmd::KvPair {
+          .key_hash = -1, .value = "invalid", .op = TraceCmd::txn_start});
       for (size_t tx_op = 0; tx_op < ops_per_tx; tx_op++) {
+        second = std::find_first_of(
+            first, last, std::cbegin(delims), std::cend(delims));
+        if (second == last) {
+          break;
+        }
         if (first != second) {
           auto str = std::string_view(first, second - first);
 
-          first = second + 1;
-          second = std::find_first_of(
-              first, last, std::cbegin(delims), std::cend(delims));
           txs.emplace_back(TraceCmd::KvPair {
               .key_hash =
                   static_cast<uint32_t>(strtoul(str.data(), nullptr, 10)),
               .value = "1",
               .op = TraceCmd::txn_put});
-           fmt::print("{} \n", str);
-          if (second == last) {
-            tokens.emplace_back(txs);
+          fmt::print("{} \n", str);
+          first = second + 1;
+          if (first == last) {
             break;
           }
         }
       }
       fmt::print("tx end .... \n");
-      if (!txs.empty())
-      	tokens.emplace_back(txs);
+      if (txs.size() > 1) {
+        txs.emplace_back(TraceCmd::KvPair {
+            .key_hash = -1, .value = "invalid", .op = TraceCmd::txn_commit});
+        tokens.emplace_back(txs);
+      }
     }
+  }
+
+  fmt::print("{}, ", tokens.size());
+  for (auto i : tokens) {
+    fmt::print("{}, ", i.operation.size());
+    if (i.operation.size() == 0)
+      fmt::print("{} \n\n\n\n", __func__);
   }
   return tokens;
 }

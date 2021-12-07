@@ -113,7 +113,7 @@ public:
       // NOLINTNEXTLINE(concurrency-mt-unsafe)
       exit(1);
     }
-      // fmt::print("{} sents {} bytes\n", __func__, size);
+    // fmt::print("{} sents {} bytes\n", __func__, size);
   }
 
   auto recv_ack() -> std::pair<int, std::unique_ptr<char[]>> {
